@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { width: 320px; font-family: -apple-system, sans-serif; background: #0f0f0f; color: #fff; }
+    .header { padding: 16px; background: linear-gradient(135deg, #6366f1, #8b5cf6); }
+    .header h1 { font-size: 16px; font-weight: 700; }
+    .header p { font-size: 11px; opacity: 0.8; margin-top: 2px; }
+    .body { padding: 16px; }
+    .input-group { margin-bottom: 12px; }
+    label { font-size: 11px; color: #aaa; display: block; margin-bottom: 4px; }
+    input { width: 100%; padding: 8px 10px; background: #1e1e1e; border: 1px solid #333; border-radius: 6px; color: #fff; font-size: 13px; outline: none; }
+    input:focus { border-color: #6366f1; }
+    .btn { width: 100%; padding: 9px; border-radius: 6px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn-primary { background: #6366f1; color: #fff; }
+    .btn-primary:hover { background: #5558e8; }
+    .btn-danger { background: #dc2626; color: #fff; margin-top: 8px; }
+    .error { color: #f87171; font-size: 12px; margin-top: 8px; display: none; }
+    .logged-in { display: none; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; display: inline-block; margin-right: 6px; }
+    .status-dot.recording { background: #ef4444; animation: pulse 1s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .user-info { font-size: 13px; margin-bottom: 12px; padding: 10px; background: #1e1e1e; border-radius: 6px; }
+    .meeting-info { font-size: 11px; color: #aaa; margin-bottom: 12px; padding: 8px 10px; background: #1a1a2e; border-radius: 6px; border-left: 3px solid #6366f1; }
+    .btn-record { width: 100%; padding: 9px; border-radius: 6px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; background: #22c55e; color: #fff; }
+    .btn-record.stop { background: #dc2626; }
+    .btn-logout { width: 100%; padding: 7px; border-radius: 6px; border: 1px solid #333; font-size: 12px; cursor: pointer; background: transparent; color: #aaa; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <!-- LOGIN VIEW -->
+  <div id="login-view">
+    <div class="header">
+      <h1>🧠 MeetingMind</h1>
+      <p>Admin login required</p>
+    </div>
+    <div class="body">
+      <div class="input-group">
+        <label>Email</label>
+        <input type="email" id="email" placeholder="admin@example.com" />
+      </div>
+      <div class="input-group">
+        <label>Password</label>
+        <input type="password" id="password" placeholder="••••••••" />
+      </div>
+      <button class="btn btn-primary" id="login-btn">Login</button>
+      <div class="error" id="error-msg"></div>
+    </div>
+  </div>
+
+  <!-- LOGGED IN VIEW -->
+  <div id="loggedin-view" class="logged-in">
+    <div class="header">
+      <h1>🧠 MeetingMind</h1>
+      <p id="header-sub">Ready to capture</p>
+    </div>
+    <div class="body">
+      <div class="user-info">
+        <span class="status-dot" id="status-dot"></span>
+        <span id="user-name">Admin</span>
+      </div>
+      <div class="meeting-info" id="meeting-info">No active meeting found</div>
+      <button class="btn btn-record" id="record-btn" disabled>Start Recording</button>
+      <button class="btn btn-logout" id="logout-btn">Logout</button>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

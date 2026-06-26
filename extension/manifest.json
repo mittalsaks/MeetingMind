@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "MeetingMind",
+  "version": "1.0",
+  "description": "Auto-capture meeting audio and track student commitments",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "tabs",
+    "scripting"
+  ],
+  "host_permissions": [
+    "http://localhost:5000/*",
+    "https://meet.google.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "MeetingMind"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://meet.google.com/*"],
+      "js": ["content.js"]
+    }
+  ]
+}
