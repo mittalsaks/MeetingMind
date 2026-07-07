@@ -1,10 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { Suspense, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuthStore } from "@/lib/store/authStore"
 
-export default function OnboardingPage() {
+export const dynamic = 'force-dynamic'
+
+function OnboardingContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const setAuth = useAuthStore((s) => s.setAuth)
@@ -99,5 +101,19 @@ export default function OnboardingPage() {
         </form>
       </div>
     </div>
+  )
+}
+
+export default function OnboardingPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        </div>
+      }
+    >
+      <OnboardingContent />
+    </Suspense>
   )
 }
