@@ -54,6 +54,14 @@ function getInitials(name: string) {
   return name.split(" ").map((p) => p[0]).join("").slice(0, 2).toUpperCase()
 }
 
+function toDateKey(value: Date | string) {
+  const date = new Date(value)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
 // Pichle 4 hafton ke weekdays (Mon-Fri) generate karo
 function getLastNWeeksDays(weeks: number) {
   const days: Date[] = []
@@ -89,10 +97,8 @@ export function AttendanceHeatmap({ records, students }: Props) {
   }
 
   function recordFor(userId: string, date: Date) {
-    const dateStr = date.toISOString().slice(0, 10)
-    return records.find(
-      (r) => r.userId === userId && r.date.slice(0, 10) === dateStr
-    )
+    const dateKey = toDateKey(date)
+    return records.find((r) => r.userId === userId && toDateKey(r.date) === dateKey)
   }
 
   if (students.length === 0) {
@@ -131,7 +137,7 @@ export function AttendanceHeatmap({ records, students }: Props) {
             ))}
           </div>
 
-          <TooltipProvider delayDuration={80}>
+          <TooltipProvider delay={80}>
             {students.map((student, ri) => (
               <motion.div
                 key={student._id}

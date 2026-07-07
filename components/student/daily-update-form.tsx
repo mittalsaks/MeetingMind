@@ -19,6 +19,7 @@ export function DailyUpdateForm() {
     setError("")
     try {
       await studentApi.submitDailyUpdate({ yesterday: done, today: next, blockers: "" })
+      window.dispatchEvent(new CustomEvent("attendance:updated"))
       setSubmitted(true)
     } catch (e: any) {
       setError(e.response?.data?.message || "Submit failed")

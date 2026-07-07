@@ -3,7 +3,25 @@ import Attendance from '../models/Attendance'
 import Meeting from '../models/Meeting'
 import User from '../models/User'
 import { AuthRequest } from '../middleware/auth'
-import mongoose from 'mongoose' 
+import mongoose from 'mongoose'
+
+function toObjectId(value: string | mongoose.Types.ObjectId) {
+  return value instanceof mongoose.Types.ObjectId ? value : new mongoose.Types.ObjectId(value)
+}
+
+function normalizeDay(dateInput: Date | string) {
+  const date = new Date(dateInput)
+  date.setHours(0, 0, 0, 0)
+  return date
+}
+
+function getDayRange(dateInput: Date | string) {
+  const start = normalizeDay(dateInput)
+  const end = new Date(start)
+  end.setDate(end.getDate() + 1)
+  return { start, end }
+}
+
 // Recomputes attendanceCount + totalInvited on the Meeting doc, so these
 // fields are never just stale/zero like they were before.
 // - attendanceCount = students who were present AND gave a verbal update
@@ -13,24 +31,95 @@ import mongoose from 'mongoose'
 //   attendance records happen to exist — this is the more correct,
 //   industry-standard meaning of "invited"
 async function syncMeetingAttendanceCounts(meetingId: string, workspaceId: string) {
-  console.log('🔵 syncMeeting called:', meetingId, workspaceId)
   const meetingObjId = new mongoose.Types.ObjectId(meetingId)
   const workspaceObjId = new mongoose.Types.ObjectId(workspaceId)
-  
+
   const [presentRecords, totalInvited] = await Promise.all([
     Attendance.countDocuments({ meetingId: meetingObjId, workspaceId: workspaceObjId, status: 'present', verbalUpdateGiven: true }),
     User.countDocuments({ workspaceId: workspaceObjId, role: 'user', isActive: true, inviteAccepted: true }),
   ])
-  console.log('🟢 counts:', presentRecords, totalInvited)
+
   await Meeting.findByIdAndUpdate(meetingObjId, { attendanceCount: presentRecords, totalInvited })
-  console.log('✅ Meeting updated')
 }
+
+export async function syncDailyUpdateAttendance(workspaceId: string | mongoose.Types.ObjectId, userId: string | mongoose.Types.ObjectId, dateInput: Date | string) {
+  const workspaceObjectId = toObjectId(workspaceId)
+  const userObjectId = toObjectId(userId)
+  const { start, end } = getDayRange(dateInput)
+
+  const existing = await Attendance.findOne({
+    workspaceId: workspaceObjectId,
+    userId: userObjectId,
+    date: { $gte: start, $lt: end },
+  })
+
+  if (existing?.status === 'leave_approved') {
+    return existing
+  }
+
+  const verbalUpdateGiven = existing?.status === 'present' && Boolean(existing.verbalUpdateGiven)
+  const joinedMeeting = existing?.status === 'present' ? Boolean(existing.joinedMeeting) : false
+
+  return Attendance.findOneAndUpdate(
+    { workspaceId: workspaceObjectId, userId: userObjectId, date: { $gte: start, $lt: end } },
+    {
+      $set: {
+        date: start,
+        status: 'present',
+        verbalUpdateGiven,
+        joinedMeeting,
+        markedBy: 'admin',
+      },
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  )
+}
+
+export async function syncLeaveAttendance(workspaceId: string | mongoose.Types.ObjectId, userId: string | mongoose.Types.ObjectId, fromDate: Date | string, toDate: Date | string, status: 'approved' | 'rejected') {
+  const workspaceObjectId = toObjectId(workspaceId)
+  const userObjectId = toObjectId(userId)
+  const start = normalizeDay(fromDate)
+  const end = normalizeDay(toDate)
+  const dayCursor = new Date(start)
+
+  if (status === 'rejected') {
+    return Attendance.deleteMany({
+      workspaceId: workspaceObjectId,
+      userId: userObjectId,
+      date: { $gte: start, $lte: end },
+      status: 'leave_approved',
+    })
+  }
+
+  const operations = [] as Promise<any>[]
+  while (dayCursor <= end) {
+    const date = new Date(dayCursor)
+    operations.push(
+      Attendance.findOneAndUpdate(
+        { workspaceId: workspaceObjectId, userId: userObjectId, date: { $gte: normalizeDay(date), $lt: new Date(date.getTime() + 24 * 60 * 60 * 1000) } },
+        {
+          $set: {
+            date,
+            status: 'leave_approved',
+            verbalUpdateGiven: false,
+            joinedMeeting: false,
+            markedBy: 'admin',
+          },
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      )
+    )
+    dayCursor.setDate(dayCursor.getDate() + 1)
+  }
+
+  return Promise.all(operations)
+}
+
 // @POST /api/attendance/mark (extension/admin marks attendance based on verbal update)
 export const markAttendance = async (req: AuthRequest, res: Response) => {
   try {
     const { userId, meetingId, verbalUpdateGiven, joinedMeeting } = req.body
-    const date = new Date()
-    date.setHours(0, 0, 0, 0)
+    const date = normalizeDay(new Date())
     const attendance = await Attendance.findOneAndUpdate(
       { workspaceId: req.user!.workspaceId, userId, meetingId },
       {

@@ -1,10 +1,37 @@
 import { Response } from 'express'
+import mongoose from 'mongoose'
 import Meeting from '../models/Meeting'
 import User from '../models/User'
 import Task from '../models/Task'
+import Attendance from '../models/Attendance'
 import { AuthRequest } from '../middleware/auth'
 import { sendEmail } from '../utils/sendEmail'
 import { extractCommitmentsFromTranscript } from '../utils/geminiExtract'
+
+// Same logic as attendance.controller.ts / audioTranscript.controller.ts —
+// kept here too so this endpoint's Meeting.attendanceCount stays accurate
+// and consistent with the real Attendance collection (see fix below).
+async function syncMeetingAttendanceCounts(meetingId: string, workspaceId: string) {
+  const meetingObjId = new mongoose.Types.ObjectId(meetingId)
+  const workspaceObjId = new mongoose.Types.ObjectId(workspaceId)
+
+  const [attendanceCount, totalInvited] = await Promise.all([
+    Attendance.countDocuments({
+      meetingId: meetingObjId,
+      workspaceId: workspaceObjId,
+      status: 'present',
+      verbalUpdateGiven: true,
+    }),
+    User.countDocuments({
+      workspaceId: workspaceObjId,
+      role: 'user',
+      isActive: true,
+      inviteAccepted: true,
+    }),
+  ])
+
+  await Meeting.findByIdAndUpdate(meetingObjId, { attendanceCount, totalInvited })
+}
 
 // @POST /api/meetings (admin only - schedule new meeting)
 export const createMeeting = async (req: AuthRequest, res: Response) => {
@@ -156,6 +183,8 @@ export const processTranscript = async (req: AuthRequest, res: Response) => {
 
     const createdTasks = []
     const spokeUserIds: string[] = []
+    const attendanceDate = new Date()
+    attendanceDate.setHours(0, 0, 0, 0)
 
     for (const item of extracted) {
       const geminiName = item.studentName.trim().toLowerCase()
@@ -188,6 +217,23 @@ export const processTranscript = async (req: AuthRequest, res: Response) => {
 
       spokeUserIds.push(matchedStudent._id.toString())
 
+      // FIX: this endpoint used to only bump meeting.attendanceCount as a
+      // raw number and never touched the Attendance collection, so the
+      // Attendance page showed nothing for meetings processed via manual
+      // paste (only the extension's process-transcript-chunk endpoint
+      // created real records). Now both paths behave identically.
+      await Attendance.findOneAndUpdate(
+        { workspaceId: req.user!.workspaceId, userId: matchedStudent._id, meetingId: meeting._id },
+        {
+          date: attendanceDate,
+          status: 'present',
+          verbalUpdateGiven: true,
+          joinedMeeting: true,
+          markedBy: 'admin'
+        },
+        { upsert: true, new: true }
+      )
+
       if (item.nextCommitment && item.nextCommitment.trim()) {
         const task = await Task.create({
           workspaceId: req.user!.workspaceId,
@@ -204,9 +250,12 @@ export const processTranscript = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    meeting.attendanceCount = spokeUserIds.length
     meeting.summary = `${extracted.length} student update(s) processed via AI`
     await meeting.save()
+
+    if (spokeUserIds.length > 0) {
+      await syncMeetingAttendanceCounts(meeting._id.toString(), req.user!.workspaceId)
+    }
 
     res.json({
       success: true,

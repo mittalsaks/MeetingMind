@@ -16,6 +16,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const router = useRouter()
   const { user, logout } = useAuthStore()
 
+  // ── original logout logic — untouched
   const handleLogout = async () => {
     try {
       await api.post('/auth/logout')
@@ -28,100 +29,214 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   }
 
   return (
-    <div className="flex h-full flex-col gap-1">
-      {/* Brand */}
-      <div className="flex items-center gap-3 px-5 py-5">
-        <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/30">
-          <BrainCircuit className="size-5" />
-        </div>
-        <div className="leading-tight">
-          <p className="text-sm font-semibold tracking-tight">MeetingMind</p>
-          <p className="text-[11px] text-muted-foreground">Mentor automation</p>
-        </div>
-      </div>
+    <>
+      <style>{`
+        .sb-nav-link {
+          position: relative;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          border-radius: 12px;
+          padding: 9px 12px;
+          font-size: 13px;
+          font-weight: 500;
+          transition: all 0.2s ease;
+          text-decoration: none;
+          cursor: pointer;
+        }
+        .sb-nav-link:hover {
+          background: rgba(255,255,255,0.05);
+          color: #fff;
+        }
+        .sb-nav-link.active {
+          background: rgba(139,92,246,0.12);
+          color: #c4b5fd;
+          border: 1px solid rgba(139,92,246,0.18);
+        }
+        .sb-nav-link.inactive {
+          color: #3a3a3a;
+        }
+        @keyframes sidebarIn {
+          from { opacity:0; transform:translateX(-8px); }
+          to   { opacity:1; transform:translateX(0); }
+        }
+        .sb-user-btn {
+          padding: 6px;
+          border-radius: 8px;
+          background: none;
+          border: none;
+          cursor: pointer;
+          color: #333;
+          display: grid;
+          place-items: center;
+          transition: all 0.2s;
+        }
+        .sb-user-btn:hover {
+          background: rgba(239,68,68,0.1);
+          color: #f87171;
+        }
+      `}</style>
 
-      {/* Nav Items */}
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href
-          const Icon = item.icon
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onNavigate}
-              className={cn(
-                "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
-                isActive
-                  ? "bg-primary/15 text-primary"
-                  : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground"
-              )}
+      <div style={{ display:"flex", flexDirection:"column", height:"100%", gap:0 }}>
+
+        {/* ── BRAND ── */}
+        <div style={{
+          display:"flex", alignItems:"center", gap:12,
+          padding:"22px 18px 18px",
+          borderBottom:"1px solid rgba(255,255,255,0.05)",
+        }}>
+          {/* Logo mark */}
+          <div style={{
+            width:36, height:36, borderRadius:11,
+            background:"rgba(139,92,246,0.15)",
+            border:"1px solid rgba(139,92,246,0.25)",
+            display:"grid", placeItems:"center",
+            boxShadow:"0 0 16px rgba(139,92,246,0.15)",
+            flexShrink:0,
+          }}>
+            <BrainCircuit style={{ width:18, height:18, color:"#c4b5fd" }} />
+          </div>
+          <div style={{ lineHeight:1.3 }}>
+            <p style={{ fontSize:13, fontWeight:700, color:"#e2e2e2", letterSpacing:"-0.01em" }}>MeetingMind</p>
+            <p style={{ fontSize:11, color:"#2d2d2d" }}>Mentor automation</p>
+          </div>
+        </div>
+
+        {/* ── NAV ITEMS ── */}
+        <nav style={{ flex:1, overflowY:"auto", padding:"10px 10px" }}>
+          {navItems.map((item, idx) => {
+            const isActive = pathname === item.href
+            const Icon = item.icon
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onNavigate}
+                className={cn("sb-nav-link", isActive ? "active" : "inactive")}
+                style={{ marginBottom:2, animation:`sidebarIn 0.3s ${idx * 0.04}s both` }}
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="sidebar-active"
+                    style={{
+                      position:"absolute", inset:0, borderRadius:12,
+                      background:"rgba(139,92,246,0.1)",
+                    }}
+                    transition={{ type:"spring", duration:0.4 }}
+                  />
+                )}
+                <Icon style={{
+                  position:"relative", zIndex:1,
+                  width:15, height:15, flexShrink:0,
+                  color: isActive ? "#c4b5fd" : "#333",
+                }} />
+                <span style={{ position:"relative", zIndex:1, flex:1, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                  {item.label}
+                </span>
+                {item.badge ? (
+                  <Badge
+                    variant="secondary"
+                    style={{
+                      position:"relative", zIndex:1,
+                      height:18, minWidth:18, display:"flex", alignItems:"center",
+                      justifyContent:"center", borderRadius:999, padding:"0 6px",
+                      fontSize:10, background:"rgba(139,92,246,0.15)",
+                      color:"#c4b5fd", border:"1px solid rgba(139,92,246,0.2)",
+                    }}
+                  >
+                    {item.badge}
+                  </Badge>
+                ) : null}
+                {!item.built && (
+                  <ChevronRight style={{
+                    position:"relative", zIndex:1,
+                    width:12, height:12, flexShrink:0, color:"#222",
+                  }} />
+                )}
+              </Link>
+            )
+          })}
+        </nav>
+
+        {/* ── AI PROMO ── */}
+        <div style={{
+          margin:"0 10px 10px",
+          borderRadius:16,
+          border:"1px solid rgba(139,92,246,0.15)",
+          background:"linear-gradient(135deg,rgba(139,92,246,0.08) 0%,rgba(139,92,246,0.02) 100%)",
+          padding:"14px 14px",
+          position:"relative", overflow:"hidden",
+        }}>
+          {/* subtle glow */}
+          <div style={{
+            position:"absolute", top:-20, right:-20,
+            width:80, height:80, borderRadius:"50%",
+            background:"radial-gradient(circle,rgba(139,92,246,0.15) 0%,transparent 70%)",
+            pointerEvents:"none",
+          }} />
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
+            <Sparkles style={{ width:14, height:14, color:"#a78bfa" }} />
+            <p style={{ fontSize:12, fontWeight:700, color:"#c4b5fd" }}>AI Insights</p>
+          </div>
+          <p style={{ fontSize:11, lineHeight:1.6, color:"#2d2d2d" }}>
+            Auto-extract meeting transcripts and surface at-risk students.
+          </p>
+        </div>
+
+        {/* ── USER PROFILE ── */}
+        <div style={{
+          padding:"12px 14px",
+          borderTop:"1px solid rgba(255,255,255,0.05)",
+          background:"rgba(255,255,255,0.02)",
+        }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            {/* Avatar */}
+            <div style={{
+              width:32, height:32, borderRadius:"50%",
+              background:"rgba(139,92,246,0.12)",
+              border:"1px solid rgba(139,92,246,0.2)",
+              display:"grid", placeItems:"center",
+              fontSize:12, fontWeight:700, color:"#c4b5fd",
+              flexShrink:0,
+            }}>
+              {user?.name?.charAt(0).toUpperCase() || <User2 style={{ width:14, height:14 }} />}
+            </div>
+            <div style={{ flex:1, overflow:"hidden", lineHeight:1.3 }}>
+              <p style={{ fontSize:12, fontWeight:600, color:"#bbb", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+                {user?.name || "Loading..."}
+              </p>
+              <p style={{ fontSize:10, color:"#2a2a2a", textTransform:"capitalize" }}>
+                {user?.role || "Member"}
+              </p>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="sb-user-btn"
+              title="Logout"
             >
-              {isActive && (
-                <motion.div
-                  layoutId="sidebar-active"
-                  className="absolute inset-0 rounded-xl bg-primary/15"
-                  transition={{ type: "spring", duration: 0.4 }}
-                />
-              )}
-              <Icon className="relative z-10 size-4 shrink-0" />
-              <span className="relative z-10 flex-1 truncate">{item.label}</span>
-              {item.badge ? (
-                <Badge
-                  variant="secondary"
-                  className="relative z-10 h-5 min-w-5 justify-center rounded-full px-1.5 text-[11px]"
-                >
-                  {item.badge}
-                </Badge>
-              ) : null}
-              {!item.built && (
-                <ChevronRight className="relative z-10 size-3.5 shrink-0 text-muted-foreground/50" />
-              )}
-            </Link>
-          )
-        })}
-      </nav>
-
-      {/* AI Promo */}
-      <div className="mx-3 mb-3 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 to-transparent p-4">
-        <div className="mb-2 flex items-center gap-2">
-          <Sparkles className="size-4 text-primary" />
-          <p className="text-sm font-semibold">AI Insights</p>
-        </div>
-        <p className="text-[12px] leading-relaxed text-muted-foreground">
-          Auto-extract meeting transcripts and surface at-risk students.
-        </p>
-      </div>
-
-      {/* Dynamic User Profile with Real Logout Button */}
-      <div className="px-4 py-3 border-t border-border/50 bg-sidebar-accent/30">
-        <div className="flex items-center gap-3">
-          <div className="grid size-8 shrink-0 place-items-center rounded-full bg-primary/10 text-primary font-semibold">
-            {user?.name?.charAt(0).toUpperCase() || <User2 className="size-4" />}
+              <LogOut style={{ width:14, height:14 }} />
+            </button>
           </div>
-          <div className="flex-1 overflow-hidden leading-tight">
-            <p className="truncate text-sm font-medium">{user?.name || "Loading..."}</p>
-            <p className="truncate text-[11px] text-muted-foreground capitalize">
-              {user?.role || "Member"}
-            </p>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-md transition-colors"
-            title="Logout"
-          >
-            <LogOut className="size-4" />
-          </button>
         </div>
+
       </div>
-    </div>
+    </>
   )
 }
 
 export function Sidebar() {
   return (
-    <aside className="hidden w-64 shrink-0 border-r border-border bg-sidebar/70 backdrop-blur-xl lg:block">
-      <div className="sticky top-0 h-dvh">
+    <aside style={{
+      width:232,
+      flexShrink:0,
+      borderRight:"1px solid rgba(255,255,255,0.05)",
+      background:"rgba(5,5,8,0.85)",
+      backdropFilter:"blur(24px)",
+      WebkitBackdropFilter:"blur(24px)",
+    }}
+      className="hidden lg:block"
+    >
+      <div style={{ position:"sticky", top:0, height:"100dvh" }}>
         <SidebarContent />
       </div>
     </aside>

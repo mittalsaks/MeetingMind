@@ -2,7 +2,7 @@ import { Response } from 'express'
 import LeaveRequest from '../models/LeaveRequest'
 import { AuthRequest } from '../middleware/auth'
 import { sendEmail } from '../utils/sendEmail'
-import User from '../models/User'
+import { syncLeaveAttendance } from './attendance.controller'
 
 // @POST /api/leave-requests (user submits)
 export const submitLeave = async (req: AuthRequest, res: Response) => {
@@ -60,6 +60,8 @@ export const reviewLeave = async (req: AuthRequest, res: Response) => {
     leave.reviewedBy = req.user!.userId as any
     leave.reviewedAt = new Date()
     await leave.save()
+
+    await syncLeaveAttendance(req.user!.workspaceId, leave.userId, leave.fromDate, leave.toDate, status)
 
     const student = leave.userId as any
     await sendEmail({

@@ -3,6 +3,9 @@ import type { NextRequest } from 'next/server'
 
 const publicPaths = ['/login', '/register', '/forgot-password', '/accept-invite', '/backend', '/auth/google', '/google-success', '/onboarding']
 
+// Routes that ONLY mentors/admins should access
+const adminOnlyPaths = ['/team', '/students', '/settings']
+
 export function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname
   const isPublicPath = publicPaths.some((p) => path.startsWith(p))
@@ -18,12 +21,13 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL(dest, request.url))
   }
 
-  // Student trying to access admin routes
-  if (hasSession && role === 'user' && !path.startsWith('/student')) {
+  // Student trying to access admin-only routes (not the shared ones)
+  const isAdminOnlyPath = adminOnlyPaths.some((p) => path.startsWith(p))
+  if (hasSession && role === 'user' && (path === '/' || isAdminOnlyPath)) {
     return NextResponse.redirect(new URL('/student', request.url))
   }
 
-  // Admin trying to access student route (exact match only, not /students)
+  // Admin trying to access student dashboard (exact match only, not /students)
   if (hasSession && role === 'admin' && (path === '/student' || path.startsWith('/student/'))) {
     return NextResponse.redirect(new URL('/', request.url))
   }

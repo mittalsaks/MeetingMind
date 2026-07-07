@@ -49,7 +49,29 @@ export default function AttendancePage() {
         setLoading(false)
       }
     }
+
+    const handleRefresh = () => {
+      setLoading(true)
+      void load()
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void load()
+      }
+    }
+
     load()
+
+    window.addEventListener("attendance:updated", handleRefresh)
+    window.addEventListener("leave:updated", handleRefresh)
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener("attendance:updated", handleRefresh)
+      window.removeEventListener("leave:updated", handleRefresh)
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+    }
   }, [])
 
   const weekStart = startOfWeek()
@@ -91,7 +113,7 @@ export default function AttendancePage() {
     <div className="mx-auto max-w-7xl">
       <PageHeader
         title="Attendance & Engagement"
-        description="Auto-tracked from meeting transcripts and daily updates — no manual roll call."
+        subtitle="Auto-tracked from meeting transcripts and daily updates — no manual roll call."
       />
 
       <Stagger className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">

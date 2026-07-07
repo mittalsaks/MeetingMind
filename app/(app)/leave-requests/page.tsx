@@ -63,6 +63,7 @@ function LeaveRequestsContent(){
   const setStatus = async (id: string, status: "approved" | "rejected") => {
     try {
       await api.put(`/leave-requests/${id}`, { status })
+      window.dispatchEvent(new CustomEvent("leave:updated"))
       setRequests((prev) =>
         prev.map((r) => (r._id === id ? { ...r, status } : r))
       )
@@ -94,7 +95,7 @@ function LeaveRequestsContent(){
     <div className="mx-auto max-w-7xl">
       <PageHeader
         title="Leave Requests"
-        description="Students submit leave with their weekly progress and next plan attached automatically."
+        subtitle="Students submit leave with their weekly progress and next plan attached automatically."
       />
 
       <Stagger className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">

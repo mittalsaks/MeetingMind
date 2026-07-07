@@ -175,10 +175,15 @@ export default function MeetingsPage() {
     load()
   }
 
-  const upcoming = meetings
-    .filter((m) => m.status === "scheduled" || m.status === "confirmed")
-    .sort((a, b) => meetingDateTime(a) - meetingDateTime(b))[0]
-  const history = meetings.filter((m) => m._id !== upcoming?._id)
+  const now = Date.now()
+
+const upcoming = meetings
+  .filter((m) => (m.status === "scheduled" || m.status === "confirmed") && meetingDateTime(m) >= now)
+  .sort((a, b) => meetingDateTime(a) - meetingDateTime(b))[0]
+
+const history = meetings
+  .filter((m) => m._id !== upcoming?._id)
+  .sort((a, b) => meetingDateTime(b) - meetingDateTime(a))
 
   if (loading) {
     return <div className="mx-auto max-w-7xl p-6 text-sm text-muted-foreground">Loading meetings...</div>

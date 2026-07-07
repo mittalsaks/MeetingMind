@@ -3,6 +3,7 @@ import DailyUpdate from '../models/DailyUpdate'
 import User from '../models/User'
 import { AuthRequest } from '../middleware/auth'
 import { sendEmail } from '../utils/sendEmail'
+import { syncDailyUpdateAttendance } from './attendance.controller'
 
 // @POST /api/daily-updates (user submits own update)
 export const submitUpdate = async (req: AuthRequest, res: Response) => {
@@ -22,6 +23,7 @@ export const submitUpdate = async (req: AuthRequest, res: Response) => {
       existing.today = today
       existing.blockers = blockers
       await existing.save()
+      await syncDailyUpdateAttendance(req.user!.workspaceId, req.user!.userId, todayDate)
       return res.json({ success: true, update: existing, message: 'Update edited' })
     }
 
@@ -33,6 +35,8 @@ export const submitUpdate = async (req: AuthRequest, res: Response) => {
       today,
       blockers
     })
+
+    await syncDailyUpdateAttendance(req.user!.workspaceId, req.user!.userId, todayDate)
 
     // Admin ko email bhejo
     const [admin, student] = await Promise.all([

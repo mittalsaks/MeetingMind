@@ -1,7 +1,17 @@
 // MeetingMind Content Script — Google Meet tab mein chalta hai
 // v2: Caption-based speaker detection + Speech Recognition fallback
 
-const API = 'http://localhost:5000/api'
+// ── API base ──
+// Localhost default (dev). Deployment ke time login flow se production URL
+// chrome.storage mein 'mm_api_base' key mein save hoga aur yahan use hoga.
+const DEFAULT_API_BASE = 'http://localhost:5000/api'
+let API = DEFAULT_API_BASE
+let apiReady = new Promise((resolve) => {
+  chrome.storage.local.get(['mm_api_base'], (data) => {
+    if (data.mm_api_base) API = data.mm_api_base
+    resolve()
+  })
+})
 
 let recognition = null
 let isRecognizing = false
@@ -23,6 +33,7 @@ let KNOWN_SPEAKERS = []
 
 async function fetchWorkspaceStudents(token) {
   try {
+    await apiReady
     const res = await fetch(`${API}/workspace/students`, {
       headers: { Authorization: `Bearer ${token}` },
       credentials: 'include'  // ← ye add karo
@@ -200,55 +211,214 @@ function enableCaptions() {
 // ── Caption DOM Selectors ──
 // ─────────────────────────────────────────────
 const CAPTION_TEXT_SELECTORS = [
+  '.ygicle.VbkSUe',
+  '.VbkSUe',
   '[jsname="tgaKEf"]',
   '[class*="a4cQT"]',
-  '.CNusmb',
-  '[jsname="YSxPC"]',
 ]
 
 const SPEAKER_SELECTORS = [
-  '[jsname="r4nke"]',
-  '[class*="KcIKyf"]',
+  '.NwPY1d',
   '[data-self-name]',
-  '.zs7s8d',
 ]
 
 let lastSpeaker = ''
 let lastText = ''
+let liveLine = { speaker: '', text: '' }
+let liveLineTimer = null
+const LIVE_LINE_FLUSH_MS = 2500
 
-function extractCaptionData(captionContainer) {
-  let speaker = ''
-  for (const sel of SPEAKER_SELECTORS) {
-    const el = captionContainer.querySelector(sel) || document.querySelector(sel)
-    if (el && el.textContent.trim()) {
-      speaker = el.textContent.trim()
-      break
+function flushLiveLine() {
+  if (liveLine.text && liveLine.text.trim().length > 2) {
+    const matchedSpeaker = matchToKnownSpeaker(liveLine.speaker)
+    const line = formatTranscriptLine(liveLine.speaker, liveLine.text)
+    if (line) {
+      console.log('MeetingMind [Caption]:', line)
+      chunkBuffer += '\n' + line
+      fullTranscript += '\n' + line
     }
+  }
+  liveLine = { speaker: '', text: '' }
+}
+function matchToKnownSpeaker(rawName) {
+  if (!rawName) return rawName
+  const clean = rawName.trim().toLowerCase()
+  if (!clean) return rawName
+
+  // 1. Exact match
+  let match = KNOWN_SPEAKERS.find(s => s.toLowerCase() === clean)
+  if (match) return match
+
+  // 2. Ek dusre ke andar contain ho (caption naam chhota ho sakta hai)
+  match = KNOWN_SPEAKERS.find(s => {
+    const known = s.toLowerCase()
+    return known.includes(clean) || clean.includes(known)
+  })
+  if (match) return match
+
+  // 3. Word-level overlap (kam se kam pehla naam match ho)
+  const cleanWords = clean.split(/\s+/)
+  match = KNOWN_SPEAKERS.find(s => {
+    const knownWords = s.toLowerCase().split(/\s+/)
+    return cleanWords[0] === knownWords[0]
+  })
+  if (match) return match
+
+  return rawName // kuch na mile to raw naam hi bhej do
+}
+function extractCaptionData(node) {
+  const row = node.closest?.('.nMcdL') || node.querySelector?.('.nMcdL') || node
+
+  let speaker = ''
+  const speakerEl = row.querySelector?.('.NwPY1d')
+  if (speakerEl && speakerEl.textContent.trim()) {
+    speaker = speakerEl.textContent.trim()
   }
 
   let text = ''
-  for (const sel of CAPTION_TEXT_SELECTORS) {
-    const el = captionContainer.querySelector(sel)
-    if (el && el.textContent.trim()) {
-      text = el.textContent.trim()
-      break
-    }
+  const textEl = row.querySelector?.('.ygicle.VbkSUe') || row.querySelector?.('.VbkSUe')
+  if (textEl && textEl.textContent.trim()) {
+    text = textEl.textContent.trim()
   }
-  if (!text) text = captionContainer.textContent.trim()
 
   return { speaker, text }
 }
 
 function formatTranscriptLine(speaker, text) {
   if (!text) return null
-  const name = speaker || 'Unknown'
+  const name = speaker || 'Unknown'   
   return `${name}: ${text}`
+}
+
+// ─────────────────────────────────────────────
+// ── ACTIVE SPEAKER FALLBACK (NEW) ──
+// ─────────────────────────────────────────────
+// Detects who is actively speaking by finding the video tile
+// with a "speaking" indicator (border, glow, or animated class)
+function getActiveSpeakerName() {
+  try {
+    // Google Meet video tiles typically have these patterns for active speaker
+    const ACTIVE_SPEAKER_PATTERNS = [
+      // Pattern 1: Class containing "speaking" (common in many Meet versions)
+      '[class*="speaking"]',
+      // Pattern 2: Data attributes indicating speaking state
+      '[data-speaking-state="true"]',
+      '[data-is-speaking="true"]',
+      // Pattern 3: Animated ring/border container (common Google Meet patterns)
+      '.DPQfe',  // Often used for speaking indicator border
+      '.Oaajhc', // Hashed class for active state
+      '.krchSc', // Hashed class for speaking highlight
+      '.v6F97e', // Alternative active tile class
+      // Pattern 4: Aria-live regions on participant tiles
+      '[aria-live="polite"][class*="tile"]',
+      '[aria-live="assertive"][class*="tile"]',
+      // Pattern 5: Video container with ring/border animation
+      '[class*="speaking-ring"]',
+      '[class*="speaking-border"]',
+      '[class*="active-speaker"]',
+      // Pattern 6: Direct Google Meet grid item with active state
+      '[data-participant-id][class*="active"]',
+    ]
+
+    let activeTile = null
+    let matchedPattern = null
+
+    // Try each pattern
+    for (const pattern of ACTIVE_SPEAKER_PATTERNS) {
+      const tile = document.querySelector(pattern)
+      if (tile) {
+        activeTile = tile
+        matchedPattern = pattern
+        console.log('MeetingMind [ActiveSpeaker]: Found speaking tile with pattern:', pattern)
+        break
+      }
+    }
+
+    // Fallback: scan ALL video tiles for animated elements or CSS indicators
+    if (!activeTile) {
+      const allTiles = document.querySelectorAll('[data-participant-id], [jsname="CchuRe"], [class*="participant"], [class*="video-tile"]')
+      for (const tile of allTiles) {
+        // Check for computed style indicating animation or border
+        const styles = window.getComputedStyle(tile)
+        if (
+          styles.animation?.includes('speak') ||
+          styles.border?.includes('rgb') ||
+          styles.boxShadow?.includes('rgb(')
+        ) {
+          activeTile = tile
+          matchedPattern = 'computed-style-animation'
+          console.log('MeetingMind [ActiveSpeaker]: Detected via computed styles')
+          break
+        }
+      }
+    }
+
+    if (!activeTile) {
+      console.log('MeetingMind [ActiveSpeaker]: No active speaker tile found')
+      return null
+    }
+
+    // Extract participant name from the tile
+    // Google Meet typically shows name in these elements:
+    let participantName = null
+
+    // Strategy 1: Look for name label at bottom of tile
+    const nameSelectors = [
+      '.t5a07e',      // Common Meet name label
+      '[class*="participant-name"]',
+      '[class*="name-label"]',
+      'div[aria-label*="("]', // Tiles often have aria-label like "John Doe (in call)"
+    ]
+
+    for (const sel of nameSelectors) {
+      const nameEl = activeTile.querySelector(sel)
+      if (nameEl?.textContent?.trim()) {
+        participantName = nameEl.textContent.trim()
+        break
+      }
+    }
+
+    // Strategy 2: Check aria-label on tile itself
+    if (!participantName) {
+      const ariaLabel = activeTile.getAttribute('aria-label') || ''
+      // Extract name from labels like "John Doe (in call)" or "Video tile for Jane Smith"
+      const nameMatch = ariaLabel.match(/^(.+?)\s*[\(\[]/)
+      if (nameMatch) {
+        participantName = nameMatch[1].trim()
+      }
+    }
+
+    // Strategy 3: Look for text in immediate children
+    if (!participantName) {
+      for (const child of activeTile.children) {
+        const text = child.textContent?.trim()
+        if (text && text.length > 0 && text.length < 50) {
+          participantName = text
+          break
+        }
+      }
+    }
+
+    if (participantName) {
+      console.log('MeetingMind [ActiveSpeaker]: Extracted name:', participantName, 'from pattern:', matchedPattern)
+      return participantName
+    } else {
+      console.log('MeetingMind [ActiveSpeaker]: Tile found but no name extracted')
+      return null
+    }
+
+  } catch (err) {
+    console.error('MeetingMind [ActiveSpeaker]: Error detecting active speaker:', err.message)
+    return null
+  }
 }
 
 // ─────────────────────────────────────────────
 // ── MutationObserver: Caption DOM watch ──
 // ─────────────────────────────────────────────
 const CAPTION_WRAPPER_SELECTORS = [
+  '[jsname="dsyhDe"]',
+  '[aria-label="Captions"]',
   '[jsname="tgaKEf"]',
   '[class*="caption"]',
   '[aria-live="polite"]',
@@ -269,18 +439,8 @@ function startCaptionObserver() {
   const target = findCaptionWrapper() || document.body
   console.log('MeetingMind: Starting MutationObserver on', target.tagName, target.className?.slice(0, 40))
 
-  captionObserver = new MutationObserver((mutations) => {
-    for (const mutation of mutations) {
-      for (const node of mutation.addedNodes) {
-        if (node.nodeType !== 1) continue
-        processCaptionNode(node)
-      }
-      if (mutation.type === 'characterData' || mutation.type === 'childList') {
-        const target = mutation.target
-        if (target.nodeType === 1) processCaptionNode(target)
-        else if (target.parentElement) processCaptionNode(target.parentElement)
-      }
-    }
+  captionObserver = new MutationObserver(() => {
+  processLatestCaptionRow()
   })
 
   captionObserver.observe(target, {
@@ -291,25 +451,72 @@ function startCaptionObserver() {
 
   console.log('MeetingMind: Caption MutationObserver active ✓')
 }
+function processLatestCaptionRow() {
+  const wrapper = findCaptionWrapper()
+  if (!wrapper) return
+  const rows = wrapper.querySelectorAll('.nMcdL')
+  if (!rows.length) return
 
-function processCaptionNode(node) {
-  const textContent = node.textContent?.trim()
-  if (!textContent || textContent.length < 3) return
+  const lastRow = rows[rows.length - 1]
+  const { text } = extractCaptionData(lastRow)
+  if (!text) return
 
-  let { speaker, text } = extractCaptionData(node)
+  // Last row mein naam dhoondo, na mile to peechhe ki rows mein dhoondo
+  let speaker = ''
+  for (let i = rows.length - 1; i >= 0; i--) {
+    const el = rows[i].querySelector('.NwPY1d')
+    if (el && el.textContent.trim()) {
+      speaker = el.textContent.trim()
+      break
+    }
+  }
 
-  if (!speaker && lastSpeaker) speaker = lastSpeaker
-  if (speaker) lastSpeaker = speaker
+  processCaptionNode(lastRow, { speaker, text })
+}
+function processCaptionNode(node, override) {
+  let speaker, text
 
-  if (!text || text === lastText) return
-  lastText = text
+  if (override) {
+    speaker = override.speaker
+    text = override.text
+  } else {
+    const row = node.closest?.('.nMcdL') || node.querySelector?.('.nMcdL') || null
+    if (!row) return
+    const data = extractCaptionData(row)
+    speaker = data.speaker
+    text = data.text
+  }
 
-  const line = formatTranscriptLine(speaker, text)
-  if (!line) return
+  if (!text) return
 
-  console.log('MeetingMind [Caption]:', line)
-  chunkBuffer += '\n' + line
-  fullTranscript += '\n' + line
+  // ┌─────────────────────────────────────────┐
+  // │ ACTIVE SPEAKER FALLBACK (NEW)           │
+  // │ If caption speaker is empty/Unknown,    │
+  // │ try to detect from video tile highlight │
+  // └─────────────────────────────────────────┘
+  if (!speaker || speaker.trim() === '' || speaker.trim().toLowerCase() === 'unknown') {
+    const activeSpeakerName = getActiveSpeakerName()
+    if (activeSpeakerName) {
+      console.log('MeetingMind [ActiveSpeaker]:', activeSpeakerName)
+      speaker = activeSpeakerName
+      // Now match it to known speakers (same logic as normal caption flow)
+      speaker = matchToKnownSpeaker(speaker)
+    }
+  }
+
+  if (speaker) {
+    if (liveLine.speaker && liveLine.speaker !== 'Unknown' && speaker !== liveLine.speaker) {
+      flushLiveLine()
+    }
+    liveLine.speaker = speaker
+  } else if (!liveLine.speaker) {
+    liveLine.speaker = 'Unknown'
+  }
+
+  liveLine.text = text
+
+  clearTimeout(liveLineTimer)
+  liveLineTimer = setTimeout(flushLiveLine, LIVE_LINE_FLUSH_MS)
 }
 
 function stopCaptionObserver() {
@@ -406,12 +613,14 @@ async function startListening(meetingId, token) {
   console.log(`MeetingMind: All systems active ✓ | Captions: ${ccOk ? 'ON' : 'FALLBACK'} | Students: ${KNOWN_SPEAKERS.length}`)
 }
 
-function stopListening() {
+async function stopListening() {
   isRecognizing = false
   clearInterval(chunkTimer)
   chunkTimer = null
 
   stopCaptionObserver()
+  clearTimeout(liveLineTimer)
+  flushLiveLine()
 
   if (recognition) {
     recognition.stop()
@@ -426,7 +635,7 @@ function stopListening() {
   const finalText = fullTranscript.trim()
   if (finalText.length > 20) {
     console.log('MeetingMind: Sending final transcript, length:', finalText.length)
-    sendTranscriptChunk(finalText)
+    await sendTranscriptChunk(finalText)
   } else {
     console.log('MeetingMind: Transcript too short, skipping:', finalText)
   }
@@ -443,6 +652,7 @@ function stopListening() {
 async function sendTranscriptChunk(transcript) {
   if (!currentMeetingId || !currentToken) return
   try {
+    await apiReady
     console.log('MeetingMind: Sending transcript chunk...\n', transcript.slice(0, 200))
     const res = await fetch(`${API}/meetings/${currentMeetingId}/process-transcript-chunk`, {
       method: 'POST',
@@ -474,8 +684,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     startListening(msg.meetingId, msg.token)
     sendResponse({ ok: true })
   } else if (msg.type === 'MM_STOP') {
-    stopListening()
-    sendResponse({ ok: true })
+    stopListening().then(() => sendResponse({ ok: true }))
+    return true
   } else if (msg.type === 'MM_DEBUG_CAPTIONS') {
     const wrapper = findCaptionWrapper()
     const btn = findCCButton()

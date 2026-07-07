@@ -49,7 +49,18 @@ export default function StudentDashboard() {
         setLoading(false)
       }
     }
+
     fetchAll()
+
+    const handleRefresh = () => {
+      setLoading(true)
+      void fetchAll()
+    }
+
+    window.addEventListener("attendance:updated", handleRefresh)
+    return () => {
+      window.removeEventListener("attendance:updated", handleRefresh)
+    }
   }, [])
 
   const pendingTasks = tasks.filter((t) => t.status === "pending")

@@ -1,4 +1,14 @@
-const API = 'http://localhost:5000/api'
+// ── API base ──
+// Localhost default (dev). Login flow se production URL 'mm_api_base' key
+// mein chrome.storage.local mein save hota hai — yahan wahi use hota hai.
+const DEFAULT_API_BASE = 'http://localhost:5000/api'
+let API = DEFAULT_API_BASE
+let apiReady = new Promise((resolve) => {
+  chrome.storage.local.get(['mm_api_base'], (data) => {
+    if (data.mm_api_base) API = data.mm_api_base
+    resolve()
+  })
+})
 
 const loginView = document.getElementById('login-view')
 const loggedinView = document.getElementById('loggedin-view')
@@ -26,9 +36,11 @@ document.getElementById('login-btn').addEventListener('click', async () => {
   errorMsg.style.display = 'none'
 
   try {
+    await apiReady
     const res = await fetch(`${API}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',  
       body: JSON.stringify({ email, password })
     })
     const data = await res.json()
@@ -46,6 +58,7 @@ document.getElementById('login-btn').addEventListener('click', async () => {
 
 async function fetchActiveMeeting(token, user) {
   try {
+    await apiReady
     const res = await fetch(`${API}/meetings/today-active`, {
       headers: { Authorization: `Bearer ${token}` }
     })
