@@ -1,11 +1,13 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuthStore } from "@/lib/store/authStore"
 import { Loader2 } from "lucide-react"
 
-export default function GoogleSuccessPage() {
+export const dynamic = 'force-dynamic'
+
+function GoogleSuccessContent() {
   const router = useRouter()
   const params = useSearchParams()
   const setAuth = useAuthStore((s) => s.setAuth)
@@ -21,20 +23,19 @@ export default function GoogleSuccessPage() {
       return
     }
 
-    // Store token in localStorage (same as normal login)
     localStorage.setItem("accessToken", token)
 
     setAuth(
-  {
-    id: "",
-    name: decodeURIComponent(name),
-    email: "",
-    role,
-    workspaceId: workspaceId || "",
-    workspaceName: "",
-  },
-  token
-)
+      {
+        id: "",
+        name: decodeURIComponent(name),
+        email: "",
+        role,
+        workspaceId: workspaceId || "",
+        workspaceName: "",
+      },
+      token
+    )
 
     router.replace("/")
   }, [])
@@ -43,5 +44,19 @@ export default function GoogleSuccessPage() {
     <div className="flex min-h-screen items-center justify-center">
       <Loader2 className="size-6 animate-spin text-muted-foreground" />
     </div>
+  )
+}
+
+export default function GoogleSuccessPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
+      <GoogleSuccessContent />
+    </Suspense>
   )
 }
