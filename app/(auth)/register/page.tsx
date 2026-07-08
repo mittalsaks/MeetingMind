@@ -103,9 +103,7 @@ export default function RegisterPage() {
     try {
       const { data } = await authApi.register(name, email, password, workspaceName)
       setAuth(data.user, data.accessToken)
-      router.push("/")
       router.push(data.user.role === "admin" ? "/" : "/student")
-      router.refresh()
     } catch (err: any) {
       setError(err.response?.data?.message || "Registration failed")
     } finally {
