@@ -18,6 +18,8 @@ import passport from './config/passport'
 
 const app = express()
 
+app.set('trust proxy', 1)
+
 app.use(cors({
   origin: (origin, callback) => {
     const allowed = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000')

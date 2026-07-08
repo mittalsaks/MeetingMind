@@ -42,11 +42,11 @@ export const register = async (req: Request, res: Response) => {
     await user.save()
 
     res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000
-    })
+  httpOnly: true,
+  secure: true,
+  sameSite: 'none',
+  maxAge: 7 * 24 * 60 * 60 * 1000
+})
 
     res.status(201).json({
       success: true,
@@ -93,11 +93,11 @@ export const login = async (req: Request, res: Response) => {
     await user.save()
 
     res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000
-    })
+  httpOnly: true,
+  secure: true,
+  sameSite: 'none',
+  maxAge: 7 * 24 * 60 * 60 * 1000
+})
 
     res.json({
       success: true,
@@ -137,12 +137,12 @@ const accessToken = generateAccessToken(user._id.toString(), user.role, safeWork
     user.refreshToken = newRefreshToken
     await user.save()
 
-    res.cookie('refreshToken', newRefreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000
-    })
+    res.cookie('refreshToken', refreshToken, {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'none',
+  maxAge: 7 * 24 * 60 * 60 * 1000
+})
 
     res.json({ success: true, accessToken })
   } catch (error: any) {
@@ -249,12 +249,12 @@ export const googleCallback = async (req: AuthRequest, res: Response) => {
     user.refreshToken = refreshTokenValue
     await user.save()
 
-    res.cookie('refreshToken', refreshTokenValue, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-    })
+    res.cookie('refreshToken', refreshToken, {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'none',
+  maxAge: 7 * 24 * 60 * 60 * 1000
+})
 
     const needsOnboarding = !user.workspaceId
 
@@ -306,12 +306,12 @@ export const completeOnboarding = async (req: AuthRequest, res: Response) => {
     user.refreshToken = newRefreshToken
     await user.save()
 
-    res.cookie('refreshToken', newRefreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 7 * 24 * 60 * 60 * 1000
-    })
+    res.cookie('refreshToken', refreshToken, {
+  httpOnly: true,
+  secure: true,
+  sameSite: 'none',
+  maxAge: 7 * 24 * 60 * 60 * 1000
+})
 
     res.json({
       success: true,
