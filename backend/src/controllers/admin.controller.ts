@@ -54,6 +54,23 @@ export const getAdminStats = async (req: AuthRequest, res: Response) => {
       status: { $in: ['scheduled', 'confirmed'] }
     }).sort({ scheduledDate: 1 })
 
+    // Combine date + time into one real ISO datetime so the frontend can
+    // format weekday/hour/minute correctly (scheduledDate alone has no
+    // time-of-day — it's stored separately in scheduledTime). Previously
+    // this sent a pre-formatted string, but admin-dashboard.tsx expects
+    // an { title?, date? } object and was silently reading undefined
+    // fields off the string, always falling back to "None".
+    let upcomingMeetingPayload: { title?: string; date?: string } | null = null
+    if (upcomingMeeting) {
+      const combined = new Date(
+        `${new Date(upcomingMeeting.scheduledDate).toISOString().slice(0, 10)}T${upcomingMeeting.scheduledTime}`
+      )
+      upcomingMeetingPayload = {
+        title: upcomingMeeting.status === 'confirmed' ? 'Confirmed' : 'Awaiting confirmation',
+        date: combined.toISOString(),
+      }
+    }
+
     res.json({
       success: true,
       stats: {
@@ -64,9 +81,7 @@ export const getAdminStats = async (req: AuthRequest, res: Response) => {
         overdueTasks,
         pendingLeave,
         weeklyUpdates,
-        upcomingMeeting: upcomingMeeting
-          ? `${new Date(upcomingMeeting.scheduledDate).toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' })} · ${upcomingMeeting.scheduledTime}`
-          : null
+        upcomingMeeting: upcomingMeetingPayload
       }
     })
   } catch (error: any) {
