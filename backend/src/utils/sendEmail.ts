@@ -1,20 +1,3 @@
-import nodemailer from 'nodemailer'
-import dns from 'dns'
-
-const resolver = new dns.Resolver()
-resolver.setServers(['8.8.8.8'])
-
-function resolveIPv4(hostname: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    resolver.resolve4(hostname, (err, addresses) => {
-      if (err || !addresses || addresses.length === 0) {
-        return reject(err || new Error('No IPv4 address found'))
-      }
-      resolve(addresses[0])
-    })
-  })
-}
-
 interface EmailOptions {
   to: string
   subject: string
@@ -23,30 +6,29 @@ interface EmailOptions {
 
 export const sendEmail = async ({ to, subject, html }: EmailOptions) => {
   try {
-    const ip = await resolveIPv4('smtp.gmail.com')
-
-    const transporter = nodemailer.createTransport({
-      host: ip,
-      port: 465,
-      secure: true,
-      tls: {
-        servername: 'smtp.gmail.com'
+    const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        'api-key': process.env.BREVO_API_KEY as string
       },
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-      },
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 10000
+      body: JSON.stringify({
+        sender: {
+          name: 'MeetingMind',
+          email: process.env.EMAIL_USER
+        },
+        to: [{ email: to }],
+        subject,
+        htmlContent: html
+      })
     })
 
-    await transporter.sendMail({
-      from: `"MeetingMind" <${process.env.EMAIL_USER}>`,
-      to,
-      subject,
-      html
-    })
+    if (!response.ok) {
+      const errorData = await response.text()
+      throw new Error(`Brevo API error: ${response.status} - ${errorData}`)
+    }
+
     console.log(`Email sent to ${to}`)
     return true
   } catch (error) {
