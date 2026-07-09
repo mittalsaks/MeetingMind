@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils"
 import api from "@/lib/api/axios"
 function getRoleFromToken(): string | null {
   try {
-    const user = localStorage.getItem("user")
+    const user = sessionStorage.getItem("user")
     if (!user) return null
     return JSON.parse(user).role || null
   } catch {

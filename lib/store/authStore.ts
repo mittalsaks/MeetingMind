@@ -23,22 +23,23 @@ export const useAuthStore = create<AuthState>((set) => ({
   accessToken: null,
   isAuthenticated: false,
   setAuth: (user, accessToken) => {
-    localStorage.setItem('accessToken', accessToken)
-    localStorage.setItem('user', JSON.stringify(user))
-    document.cookie = 'hasSession=true; path=/; max-age=604800'
-    document.cookie = `userRole=${user.role}; path=/; max-age=604800`
+    sessionStorage.setItem('accessToken', accessToken)
+    sessionStorage.setItem('user', JSON.stringify(user))
+    // No max-age = session cookie, auto-clears when the browser closes
+    document.cookie = 'hasSession=true; path=/'
+    document.cookie = `userRole=${user.role}; path=/`
     set({ user, accessToken, isAuthenticated: true })
   },
   logout: () => {
-    localStorage.removeItem('accessToken')
-    localStorage.removeItem('user')
+    sessionStorage.removeItem('accessToken')
+    sessionStorage.removeItem('user')
     document.cookie = 'hasSession=; path=/; max-age=0'
     document.cookie = 'userRole=; path=/; max-age=0'
     set({ user: null, accessToken: null, isAuthenticated: false })
   },
   hydrate: () => {
-    const token = localStorage.getItem('accessToken')
-    const userStr = localStorage.getItem('user')
+    const token = sessionStorage.getItem('accessToken')
+    const userStr = sessionStorage.getItem('user')
     if (token && userStr) {
       try {
         set({ user: JSON.parse(userStr), accessToken: token, isAuthenticated: true })

@@ -6,7 +6,7 @@ const api = axios.create({
 })
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('accessToken')
+  const token = sessionStorage.getItem('accessToken')
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }
@@ -51,7 +51,7 @@ api.interceptors.response.use(
           {},
           { withCredentials: true }
         )
-        localStorage.setItem('accessToken', data.accessToken)
+        sessionStorage.setItem('accessToken', data.accessToken)
         isRefreshing = false
         onRefreshed(data.accessToken)
         originalRequest.headers.Authorization = `Bearer ${data.accessToken}`
@@ -59,7 +59,7 @@ api.interceptors.response.use(
       } catch {
         isRefreshing = false
         refreshSubscribers = []
-        localStorage.removeItem('accessToken')
+        sessionStorage.removeItem('accessToken')
         document.cookie = 'hasSession=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
         document.cookie = 'userRole=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
         window.location.href = '/login'
