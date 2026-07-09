@@ -1,5 +1,7 @@
 ﻿import dotenv from 'dotenv'
 dotenv.config()
+import dns from 'dns'
+dns.setDefaultResultOrder('ipv4first')
 import { startWeeklyMeetingConfirmationCron } from './jobs/weeklyMeetingConfirmation'
 import express from 'express'
 import mongoose from 'mongoose'
