@@ -31,7 +31,8 @@ export const inviteStudent = async (req: AuthRequest, res: Response) => {
 
     const inviteLink = `${process.env.FRONTEND_URL}/accept-invite/${inviteToken}`
 
-    await sendEmail({
+    // Don't block the response on email sending — send it in the background
+    sendEmail({
       to: email,
       subject: `You're invited to join ${workspace.name} on MeetingMind`,
       html: `
@@ -40,7 +41,7 @@ export const inviteStudent = async (req: AuthRequest, res: Response) => {
         <p><a href="${inviteLink}">Click here to accept the invite and set your password</a></p>
         <p>This link is valid for 7 days.</p>
       `
-    })
+    }).catch(err => console.error('Invite email failed:', err))
 
     res.status(201).json({
       success: true,
