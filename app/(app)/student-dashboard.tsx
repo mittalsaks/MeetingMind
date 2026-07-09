@@ -69,10 +69,17 @@ export default function StudentDashboard() {
   const totalCount = attendance.length
   const attendanceLabel = totalCount === 0 ? "No data" : `${presentCount}/${totalCount}`
 
-  // Upcoming meeting — nearest future scheduledDate
+  // Combine date + time into one real timestamp — comparing scheduledDate
+  // alone treats a same-day meeting as "upcoming" even after its time has
+  // passed, which was hiding later confirmed meetings behind stale ones.
+  function meetingDateTime(m: any) {
+    return new Date(`${new Date(m.scheduledDate).toISOString().slice(0, 10)}T${m.scheduledTime}`).getTime()
+  }
+
+  // Upcoming meeting — nearest future meeting that's actually still scheduled/confirmed
   const upcomingMeeting = meetings
-    .filter((m) => new Date(m.scheduledDate) >= new Date())
-    .sort((a, b) => new Date(a.scheduledDate).getTime() - new Date(b.scheduledDate).getTime())[0] || null
+    .filter((m) => (m.status === "scheduled" || m.status === "confirmed") && meetingDateTime(m) >= Date.now())
+    .sort((a, b) => meetingDateTime(a) - meetingDateTime(b))[0] || null
 
   const stats = [
     { key: "today", label: "Today's Tasks", value: pendingTasks.length, tone: "primary", hint: "Pending / in progress" },
