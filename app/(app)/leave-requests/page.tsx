@@ -1,12 +1,13 @@
 "use client"
-import { AdminOnly } from "@/components/auth/admin-only"
 import { useEffect, useState } from "react"
-import { PlaneTakeoff, Clock, CheckCircle2, XCircle } from "lucide-react"
+import { PlaneTakeoff, Clock, CheckCircle2, XCircle, Loader2, Send } from "lucide-react"
 import { Stagger, StaggerItem } from "@/components/motion"
 import { PageHeader } from "@/components/page-header"
 import { StatCard } from "@/components/stat-card"
 import { LeaveCard } from "@/components/leave/leave-card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Button } from "@/components/ui/button"
+import { useAuthStore } from "@/lib/store/authStore"
 import api from "@/lib/api/axios"
 
 type Filter = "all" | "pending" | "approved" | "rejected"
@@ -41,7 +42,172 @@ function timeAgo(dateStr: string) {
   return `${Math.floor(hrs / 24)}d ago`
 }
 
-function LeaveRequestsContent(){
+// ---- Student-side: submit a new leave request ----
+function StudentLeaveForm() {
+  const [form, setForm] = useState({
+    reason: "",
+    fromDate: "",
+    toDate: "",
+    weekProgress: "",
+    nextPlan: "",
+  })
+  const [myLeaves, setMyLeaves] = useState<BackendLeave[]>([])
+  const [loading, setLoading] = useState(true)
+  const [submitting, setSubmitting] = useState(false)
+  const [success, setSuccess] = useState(false)
+
+  async function load() {
+    try {
+      const res = await api.get("/leave-requests")
+      setMyLeaves(res.data?.leaves || [])
+    } catch (err) {
+      console.error("Failed to load leave requests", err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    load()
+  }, [])
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setSubmitting(true)
+    setSuccess(false)
+    try {
+      await api.post("/leave-requests", form)
+      setForm({ reason: "", fromDate: "", toDate: "", weekProgress: "", nextPlan: "" })
+      setSuccess(true)
+      await load()
+    } catch (err) {
+      console.error("Failed to submit leave request", err)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="mx-auto max-w-3xl">
+      <PageHeader
+        title="Leave Requests"
+        subtitle="Submit a leave request with your weekly progress and next plan."
+      />
+
+      <div className="glass mb-6 rounded-2xl border border-border p-5 sm:p-6">
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">From</label>
+              <input
+                type="date"
+                required
+                value={form.fromDate}
+                onChange={(e) => setForm((f) => ({ ...f, fromDate: e.target.value }))}
+                className="w-full rounded-xl border border-border bg-background/60 p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">To</label>
+              <input
+                type="date"
+                required
+                value={form.toDate}
+                onChange={(e) => setForm((f) => ({ ...f, toDate: e.target.value }))}
+                className="w-full rounded-xl border border-border bg-background/60 p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Reason</label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. Family function"
+              value={form.reason}
+              onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))}
+              className="w-full rounded-xl border border-border bg-background/60 p-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">This week&apos;s progress</label>
+            <textarea
+              required
+              rows={2}
+              placeholder="What did you complete this week?"
+              value={form.weekProgress}
+              onChange={(e) => setForm((f) => ({ ...f, weekProgress: e.target.value }))}
+              className="w-full resize-none rounded-xl border border-border bg-background/60 p-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">Next week&apos;s plan</label>
+            <textarea
+              required
+              rows={2}
+              placeholder="What will you work on after returning?"
+              value={form.nextPlan}
+              onChange={(e) => setForm((f) => ({ ...f, nextPlan: e.target.value }))}
+              className="w-full resize-none rounded-xl border border-border bg-background/60 p-2.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+          </div>
+
+          {success && (
+            <p className="rounded-lg border border-success/30 bg-success/10 px-3 py-2 text-xs text-success">
+              ✓ Leave request submitted successfully
+            </p>
+          )}
+
+          <Button type="submit" disabled={submitting} className="w-full gap-1.5">
+            {submitting ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
+            Submit Leave Request
+          </Button>
+        </form>
+      </div>
+
+      <div className="glass overflow-hidden rounded-2xl border border-border">
+        <div className="border-b border-border p-5">
+          <h2 className="text-sm font-semibold">Your Requests</h2>
+        </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-10 text-muted-foreground">
+            <Loader2 className="size-5 animate-spin" />
+          </div>
+        ) : myLeaves.length === 0 ? (
+          <p className="px-5 py-10 text-center text-sm text-muted-foreground">No requests yet.</p>
+        ) : (
+          <div className="grid gap-4 p-5 md:grid-cols-2">
+            {myLeaves.map((req) => (
+              <LeaveCard
+                key={req._id}
+                compact
+                readOnly
+                req={{
+                  id: req._id,
+                  student: req.userId?.name || "You",
+                  initials: getInitials(req.userId?.name || "U"),
+                  team: "",
+                  dates: formatDateRange(req.fromDate, req.toDate),
+                  reason: req.reason,
+                  weekProgress: req.weekProgress,
+                  nextPlan: req.nextPlan,
+                  status: req.status,
+                  submitted: timeAgo(req.createdAt),
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ---- Admin-side: review all requests ----
+function AdminLeaveReview() {
   const [requests, setRequests] = useState<BackendLeave[]>([])
   const [filter, setFilter] = useState<Filter>("all")
   const [loading, setLoading] = useState(true)
@@ -64,9 +230,7 @@ function LeaveRequestsContent(){
     try {
       await api.put(`/leave-requests/${id}`, { status })
       window.dispatchEvent(new CustomEvent("leave:updated"))
-      setRequests((prev) =>
-        prev.map((r) => (r._id === id ? { ...r, status } : r))
-      )
+      setRequests((prev) => prev.map((r) => (r._id === id ? { ...r, status } : r)))
     } catch (err) {
       console.error("Failed to update leave request", err)
     }
@@ -144,6 +308,18 @@ function LeaveRequestsContent(){
     </div>
   )
 }
+
 export default function LeaveRequestsPage() {
-  return <AdminOnly><LeaveRequestsContent /></AdminOnly>
+  const user = useAuthStore((s) => s.user)
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+
+  if (!isAuthenticated || !user) {
+    return (
+      <div className="flex items-center justify-center py-20 text-muted-foreground">
+        <Loader2 className="size-5 animate-spin" />
+      </div>
+    )
+  }
+
+  return user.role === "admin" ? <AdminLeaveReview /> : <StudentLeaveForm />
 }

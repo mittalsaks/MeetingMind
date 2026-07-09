@@ -17,11 +17,13 @@ const statusMeta = {
 export function LeaveCard({
   req,
   compact = false,
+  readOnly = false,
   onApprove,
   onReject,
 }: {
   req: LeaveRequest
   compact?: boolean
+  readOnly?: boolean
   onApprove?: () => void
   onReject?: () => void
 }) {
@@ -78,7 +80,7 @@ export function LeaveCard({
 
       <div className="mt-3 flex items-center justify-between">
         <span className="text-[11px] text-muted-foreground">Submitted {req.submitted}</span>
-        {status === "pending" ? (
+        {status === "pending" && !readOnly ? (
           <div className="flex gap-2">
             <Button
               size="sm"

@@ -1,6 +1,8 @@
 import { Response } from 'express'
 import Task from '../models/Task'
+import User from '../models/User'
 import { AuthRequest } from '../middleware/auth'
+import { sendEmail } from '../utils/sendEmail'
 
 // @GET /api/tasks (admin = all workspace tasks, user = own tasks only)
 export const getTasks = async (req: AuthRequest, res: Response) => {
@@ -57,6 +59,27 @@ export const markComplete = async (req: AuthRequest, res: Response) => {
     task.submittedAt = new Date()
     await task.save()
 
+    // Notify all admins in this workspace that a task is waiting verification
+    const admins = await User.find({ workspaceId: req.user!.workspaceId, role: 'admin' })
+    const studentName = (await User.findById(req.user!.userId))?.name || 'A student'
+
+    for (const admin of admins) {
+      await sendEmail({
+        to: admin.email,
+        subject: `✅ ${studentName} marked a task complete — review needed`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+            <h2 style="color: #111;">Task Ready for Verification</h2>
+            <p>Hi ${admin.name},</p>
+            <p><strong>${studentName}</strong> has marked the following task as complete:</p>
+            <p style="padding:12px;background:#f3f4f6;border-radius:8px;">${task.title}</p>
+            <p>Please review and verify it in the dashboard.</p>
+            <p style="margin-top:24px;color:#888;font-size:12px;">MeetingMind</p>
+          </div>
+        `,
+      })
+    }
+
     res.json({ success: true, task })
   } catch (error: any) {
     res.status(500).json({ message: error.message })
@@ -77,6 +100,24 @@ export const verifyTask = async (req: AuthRequest, res: Response) => {
     task.verifiedAt = new Date()
     task.verifiedBy = req.user!.userId as any
     await task.save()
+
+    const student = await User.findById(task.userId)
+    if (student) {
+      await sendEmail({
+        to: student.email,
+        subject: '🎉 Your task has been verified!',
+        html: `
+          <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+            <h2 style="color: #111;">Task Verified</h2>
+            <p>Hi ${student.name},</p>
+            <p>Your mentor has verified this task:</p>
+            <p style="padding:12px;background:#f3f4f6;border-radius:8px;">${task.title}</p>
+            <p>Great work — keep it up!</p>
+            <p style="margin-top:24px;color:#888;font-size:12px;">MeetingMind</p>
+          </div>
+        `,
+      })
+    }
 
     res.json({ success: true, task })
   } catch (error: any) {

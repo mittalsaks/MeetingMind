@@ -1,6 +1,6 @@
 "use client"
 
-import type { ReactNode } from "react"
+import { useState, type ReactNode } from "react"
 import { PageHeader } from "@/components/features/page-header"
 import { PageTransition } from "@/components/features/motion"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -63,13 +63,14 @@ function ToggleRow({
   description: string
   defaultChecked?: boolean
 }) {
+  const [checked, setChecked] = useState(!!defaultChecked)
   return (
     <div className="flex items-center justify-between gap-4 py-3">
       <div className="space-y-0.5">
         <p className="text-sm font-medium">{title}</p>
         <p className="text-xs leading-relaxed text-muted-foreground">{description}</p>
       </div>
-      <Switch defaultChecked={defaultChecked} />
+      <Switch checked={checked} onCheckedChange={setChecked} />
     </div>
   )
 }
@@ -83,7 +84,7 @@ const tabs = [
   { value: "integrations", label: "Integrations", icon: Plug },
 ]
 
-const integrations = [
+const initialIntegrations = [
   { name: "Slack", description: "Post updates and reminders to channels", connected: true },
   { name: "Google Calendar", description: "Sync meetings and availability", connected: true },
   { name: "Zoom", description: "Auto-record and transcribe calls", connected: false },
@@ -91,6 +92,35 @@ const integrations = [
 ]
 
 export default function SettingsPage() {
+  // ── Workspace tab state ──
+  const [wsName, setWsName] = useState("Acme Inc.")
+  const [wsUrl, setWsUrl] = useState("acme.meetingmind.app")
+  const [timezone, setTimezone] = useState("America / New York")
+  const [weekStart, setWeekStart] = useState("Monday")
+  const [saved, setSaved] = useState(false)
+
+  // ── Roles tab state ──
+  const [memberRoles, setMemberRoles] = useState<Record<string, string>>(
+    Object.fromEntries(
+      members.map((m) => [m.id, m.id === "m3" || m.id === "m6" ? "Mentor" : "Student"])
+    )
+  )
+
+  // ── Integrations tab state ──
+  const [integrations, setIntegrations] = useState(initialIntegrations)
+
+  function handleSaveWorkspace() {
+    // TODO: wire to backend PUT /api/workspace when endpoint is ready
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  function toggleIntegration(name: string) {
+    setIntegrations((prev) =>
+      prev.map((i) => (i.name === name ? { ...i, connected: !i.connected } : i))
+    )
+  }
+
   return (
       <PageTransition className="space-y-6">
         <PageHeader
@@ -118,15 +148,25 @@ export default function SettingsPage() {
               <div className="grid gap-5 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="ws-name">Workspace name</Label>
-                  <Input id="ws-name" defaultValue="Acme Inc." className="bg-background/40" />
+                  <Input
+                    id="ws-name"
+                    value={wsName}
+                    onChange={(e) => setWsName(e.target.value)}
+                    className="bg-background/40"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="ws-url">Workspace URL</Label>
-                  <Input id="ws-url" defaultValue="acme.meetingmind.app" className="bg-background/40" />
+                  <Input
+                    id="ws-url"
+                    value={wsUrl}
+                    onChange={(e) => setWsUrl(e.target.value)}
+                    className="bg-background/40"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Timezone</Label>
-                  <Select defaultValue="America / New York">
+                  <Select value={timezone} onValueChange={(val) => val && setTimezone(val)}>
                     <SelectTrigger className="w-full bg-background/40">
                       <SelectValue />
                     </SelectTrigger>
@@ -140,7 +180,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Week starts on</Label>
-                  <Select defaultValue="Monday">
+                 <Select value={weekStart} onValueChange={(val) => val && setWeekStart(val)}>
                     <SelectTrigger className="w-full bg-background/40">
                       <SelectValue />
                     </SelectTrigger>
@@ -152,8 +192,15 @@ export default function SettingsPage() {
                 </div>
               </div>
               <Separator className="my-5" />
-              <div className="flex justify-end">
-                <Button size="sm">Save changes</Button>
+              <div className="flex items-center justify-end gap-3">
+                {saved && (
+                  <span className="flex items-center gap-1.5 text-xs font-medium text-emerald-400">
+                    <Check className="size-3.5" /> Saved
+                  </span>
+                )}
+                <Button size="sm" onClick={handleSaveWorkspace}>
+                  Save changes
+                </Button>
               </div>
             </SectionCard>
           </TabsContent>
@@ -284,7 +331,12 @@ export default function SettingsPage() {
                         </p>
                       </div>
                     </div>
-                    <Select defaultValue={m.id === "m3" || m.id === "m6" ? "Mentor" : "Student"}>
+                    <Select
+                      value={memberRoles[m.id]}
+                      onValueChange={(val) =>
+                      val && setMemberRoles((prev) => ({ ...prev, [m.id]: val }))
+                    }
+                    >
                       <SelectTrigger size="sm" className="w-32 bg-card/60">
                         <SelectValue />
                       </SelectTrigger>
@@ -326,7 +378,11 @@ export default function SettingsPage() {
                         {i.description}
                       </p>
                     </div>
-                    <Button variant={i.connected ? "outline" : "default"} size="sm">
+                    <Button
+                      variant={i.connected ? "outline" : "default"}
+                      size="sm"
+                      onClick={() => toggleIntegration(i.name)}
+                    >
                       {i.connected ? "Manage" : "Connect"}
                     </Button>
                   </div>

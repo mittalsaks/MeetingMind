@@ -146,21 +146,15 @@ export const processAudioChunk = async (req: AuthRequest, res: Response) => {
       }
 
       // 4b. Mark Attendance — upsert, same pattern as markAttendance controller
-      await Attendance.findOneAndUpdate(
-        {
-          workspaceId: req.user!.workspaceId,
-          userId,
-          meetingId: meeting._id,
-        },
-        {
-          date: attendanceDate,
-          status: 'present',
-          verbalUpdateGiven: true,
-          joinedMeeting: true,
-          markedBy: 'extension',
-        },
-        { upsert: true, new: true }
-      )
+      const dayStart = new Date(attendanceDate)
+const dayEnd = new Date(dayStart)
+dayEnd.setDate(dayEnd.getDate() + 1)
+
+await Attendance.findOneAndUpdate(
+  { workspaceId: req.user!.workspaceId, userId, date: { $gte: dayStart, $lt: dayEnd } },
+  { date: attendanceDate, meetingId: meeting._id, status: 'present', verbalUpdateGiven: true, joinedMeeting: true, markedBy: 'extension' },
+  { upsert: true, new: true }
+)
       attendanceMarked++
     }
 
@@ -249,11 +243,15 @@ export const processTranscriptChunk = async (req: AuthRequest, res: Response) =>
         tasksCreated++
       }
 
-      await Attendance.findOneAndUpdate(
-        { workspaceId: req.user!.workspaceId, userId, meetingId: meeting._id },
-        { date: attendanceDate, status: 'present', verbalUpdateGiven: true, joinedMeeting: true, markedBy: 'extension' },
-        { upsert: true, new: true }
-      )
+      const dayStart = new Date(attendanceDate)
+const dayEnd = new Date(dayStart)
+dayEnd.setDate(dayEnd.getDate() + 1)
+
+await Attendance.findOneAndUpdate(
+  { workspaceId: req.user!.workspaceId, userId, date: { $gte: dayStart, $lt: dayEnd } },
+  { date: attendanceDate, meetingId: meeting._id, status: 'present', verbalUpdateGiven: true, joinedMeeting: true, markedBy: 'extension' },
+  { upsert: true, new: true }
+)
       attendanceMarked++
     }
 

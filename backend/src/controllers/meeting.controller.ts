@@ -222,17 +222,25 @@ export const processTranscript = async (req: AuthRequest, res: Response) => {
       // Attendance page showed nothing for meetings processed via manual
       // paste (only the extension's process-transcript-chunk endpoint
       // created real records). Now both paths behave identically.
-      await Attendance.findOneAndUpdate(
-        { workspaceId: req.user!.workspaceId, userId: matchedStudent._id, meetingId: meeting._id },
-        {
-          date: attendanceDate,
-          status: 'present',
-          verbalUpdateGiven: true,
-          joinedMeeting: true,
-          markedBy: 'admin'
-        },
-        { upsert: true, new: true }
-      )
+      // Match by workspace+user+date (same as syncDailyUpdateAttendance) instead of
+// meetingId, so a daily-update record for today doesn't create a duplicate
+// Attendance doc when the meeting transcript is processed the same day.
+const dayStart = new Date(attendanceDate)
+const dayEnd = new Date(dayStart)
+dayEnd.setDate(dayEnd.getDate() + 1)
+
+await Attendance.findOneAndUpdate(
+  { workspaceId: req.user!.workspaceId, userId: matchedStudent._id, date: { $gte: dayStart, $lt: dayEnd } },
+  {
+    date: attendanceDate,
+    meetingId: meeting._id,
+    status: 'present',
+    verbalUpdateGiven: true,
+    joinedMeeting: true,
+    markedBy: 'admin'
+  },
+  { upsert: true, new: true }
+)
 
       if (item.nextCommitment && item.nextCommitment.trim()) {
         const task = await Task.create({

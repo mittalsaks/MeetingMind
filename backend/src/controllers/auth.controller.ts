@@ -137,7 +137,7 @@ const accessToken = generateAccessToken(user._id.toString(), user.role, safeWork
     user.refreshToken = newRefreshToken
     await user.save()
 
-    res.cookie('refreshToken', refreshToken, {
+   res.cookie('refreshToken', newRefreshToken, {
   httpOnly: true,
   secure: true,
   sameSite: 'none',
@@ -249,7 +249,7 @@ export const googleCallback = async (req: AuthRequest, res: Response) => {
     user.refreshToken = refreshTokenValue
     await user.save()
 
-    res.cookie('refreshToken', refreshToken, {
+    res.cookie('refreshToken', refreshTokenValue, {
   httpOnly: true,
   secure: true,
   sameSite: 'none',
@@ -306,7 +306,7 @@ export const completeOnboarding = async (req: AuthRequest, res: Response) => {
     user.refreshToken = newRefreshToken
     await user.save()
 
-    res.cookie('refreshToken', refreshToken, {
+    res.cookie('refreshToken', newRefreshToken, {
   httpOnly: true,
   secure: true,
   sameSite: 'none',

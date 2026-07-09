@@ -15,7 +15,9 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname()
   const router = useRouter()
   const { user, logout } = useAuthStore()
-
+  const rawRole = (user?.role || "").toString().toLowerCase()
+  const role = (rawRole.includes("student") ? "student" : "admin") as "admin" | "student"
+  const visibleNavItems = navItems.filter(item => !item.roles || item.roles.includes(role))
   // ── original logout logic — untouched
   const handleLogout = async () => {
     try {
@@ -104,7 +106,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 
         {/* ── NAV ITEMS ── */}
         <nav style={{ flex:1, overflowY:"auto", padding:"10px 10px" }}>
-          {navItems.map((item, idx) => {
+          {visibleNavItems.map((item, idx) => {
             const isActive = pathname === item.href
             const Icon = item.icon
             return (

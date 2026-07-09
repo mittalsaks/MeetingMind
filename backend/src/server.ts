@@ -5,6 +5,7 @@ import express from 'express'
 import mongoose from 'mongoose'
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
+import path from 'path'
 import authRoutes from './routes/auth.routes'
 import taskRoutes from './routes/task.routes'
 import workspaceRoutes from './routes/workspace.routes'
@@ -28,6 +29,9 @@ app.use(cors({
     
     // No origin (mobile apps, curl, Postman) — allow karo
     if (!origin) return callback(null, true)
+
+    // Chrome extension requests — allow karo (extension ID changes per install)
+    if (origin.startsWith('chrome-extension://')) return callback(null, true)
     
     if (allowed.includes(origin)) {
       callback(null, true)
@@ -49,7 +53,7 @@ mongoose.connect(process.env.MONGO_URI!)
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'MeetingMind Backend Running' })
 })
-
+app.use('/downloads', express.static(path.join(__dirname, 'public')))
 app.use('/api/auth', authRoutes)
 app.use('/api/tasks', taskRoutes)
 app.use('/api/workspace', workspaceRoutes)

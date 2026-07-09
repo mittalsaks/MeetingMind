@@ -14,7 +14,15 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import api from "@/lib/api/axios"
-
+function getRoleFromToken(): string | null {
+  try {
+    const user = localStorage.getItem("user")
+    if (!user) return null
+    return JSON.parse(user).role || null
+  } catch {
+    return null
+  }
+}
 type Priority = "High" | "Medium" | "Low"
 type Status = "pending" | "waiting_verification" | "verified" | "rejected"
 
@@ -55,11 +63,15 @@ function TaskCard({
   task,
   onVerify,
   onReject,
+  onComplete,
+  isAdmin,
   busy,
 }: {
   task: Task
   onVerify: () => void
   onReject: () => void
+  onComplete: () => void
+  isAdmin: boolean
   busy: boolean
 }) {
   const name = task.userId?.name || "Unknown"
@@ -129,24 +141,36 @@ function TaskCard({
         </div>
       )}
 
-      {canVerify && (
-        <div className="mt-3 flex gap-2 opacity-0 transition-all group-hover:opacity-100">
-          <button
-            onClick={onVerify}
-            disabled={busy}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-success/30 bg-success/10 py-1.5 text-[11px] font-medium text-success transition-all hover:bg-success/20 disabled:opacity-50"
-          >
-            {busy ? <Loader2 className="size-3 animate-spin" /> : <>Verify <ArrowRight className="size-3" /></>}
-          </button>
-          <button
-            onClick={onReject}
-            disabled={busy}
-            className="flex items-center justify-center gap-1.5 rounded-lg border border-border bg-card/40 px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition-all hover:border-danger/40 hover:text-danger disabled:opacity-50"
-          >
-            Reject
-          </button>
-        </div>
-      )}
+      {canVerify && isAdmin && (
+  <div className="mt-3 flex gap-2 opacity-0 transition-all group-hover:opacity-100">
+    <button
+      onClick={onVerify}
+      disabled={busy}
+      className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-success/30 bg-success/10 py-1.5 text-[11px] font-medium text-success transition-all hover:bg-success/20 disabled:opacity-50"
+    >
+      {busy ? <Loader2 className="size-3 animate-spin" /> : <>Verify <ArrowRight className="size-3" /></>}
+    </button>
+    <button
+      onClick={onReject}
+      disabled={busy}
+      className="flex items-center justify-center gap-1.5 rounded-lg border border-border bg-card/40 px-3 py-1.5 text-[11px] font-medium text-muted-foreground transition-all hover:border-danger/40 hover:text-danger disabled:opacity-50"
+    >
+      Reject
+    </button>
+  </div>
+)}
+
+{task.status === "pending" && !isAdmin && (
+  <div className="mt-3 flex gap-2 opacity-0 transition-all group-hover:opacity-100">
+    <button
+      onClick={onComplete}
+      disabled={busy}
+      className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 py-1.5 text-[11px] font-medium text-primary transition-all hover:bg-primary/20 disabled:opacity-50"
+    >
+      {busy ? <Loader2 className="size-3 animate-spin" /> : <>Mark Complete <ArrowRight className="size-3" /></>}
+    </button>
+  </div>
+)}
     </motion.div>
   )
 }
@@ -155,7 +179,7 @@ export function Kanban() {
   const [items, setItems] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState<string | null>(null)
-
+  const isAdmin = getRoleFromToken() === "admin"
   useEffect(() => {
     api.get("/tasks")
       .then((res) => setItems(res.data?.tasks || []))
@@ -180,20 +204,36 @@ export function Kanban() {
   }
 
   async function reject(id: string) {
-    const task = items.find((t) => t._id === id)
-    if (!task) return
+  const task = items.find((t) => t._id === id)
+  if (!task) return
 
-    setBusyId(id)
-    try {
-      const res = await api.put(`/tasks/${id}/reject`)
-      const updated = res.data?.task
-      setItems((prev) => prev.map((t) => (t._id === id ? { ...t, status: updated?.status || "rejected" } : t)))
-    } catch (err) {
-      console.error("Failed to reject task", err)
-    } finally {
-      setBusyId(null)
-    }
+  setBusyId(id)
+  try {
+    const res = await api.put(`/tasks/${id}/reject`)
+    const updated = res.data?.task
+    setItems((prev) => prev.map((t) => (t._id === id ? { ...t, status: updated?.status || "rejected" } : t)))
+  } catch (err) {
+    console.error("Failed to reject task", err)
+  } finally {
+    setBusyId(null)
   }
+}
+
+async function complete(id: string) {
+  const task = items.find((t) => t._id === id)
+  if (!task) return
+
+  setBusyId(id)
+  try {
+    const res = await api.put(`/tasks/${id}/complete`)
+    const updated = res.data?.task
+    setItems((prev) => prev.map((t) => (t._id === id ? { ...t, status: updated?.status || "waiting_verification" } : t)))
+  } catch (err) {
+    console.error("Failed to mark task complete", err)
+  } finally {
+    setBusyId(null)
+  }
+}
 
   if (loading) {
     return (
@@ -225,12 +265,14 @@ export function Kanban() {
                 {colTasks.length ? (
                   colTasks.map((t) => (
                     <TaskCard
-                      key={t._id}
-                      task={t}
-                      onVerify={() => verify(t._id)}
-                      onReject={() => reject(t._id)}
-                      busy={busyId === t._id}
-                    />
+  key={t._id}
+  task={t}
+  onVerify={() => verify(t._id)}
+  onReject={() => reject(t._id)}
+  onComplete={() => complete(t._id)}
+  isAdmin={isAdmin}
+  busy={busyId === t._id}
+/>
                   ))
                 ) : (
                   <div className="flex flex-1 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border py-10 text-center">

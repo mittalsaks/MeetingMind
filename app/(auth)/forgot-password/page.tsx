@@ -158,7 +158,10 @@ export default function ForgotPasswordPage() {
         }
 
         .fp-otp-box {
-          flex:1; height:52px;
+          flex: 1 1 0;
+          min-width: 0;
+          max-width: 52px;
+          height:52px;
           background:rgba(255,255,255,0.04);
           border:1px solid rgba(255,255,255,0.08);
           border-radius:12px; color:#fff;
@@ -315,7 +318,7 @@ export default function ForgotPasswordPage() {
                   <p style={{ fontSize:14, color:"#444", marginBottom:18 }}>We sent a 6-digit code to <span style={{ color:"#777" }}>{email}</span></p>
                   <form onSubmit={handleVerifyOtp} style={{ display:"flex", flexDirection:"column", gap:10 }}>
                     {/* OTP boxes */}
-                    <div style={{ display:"flex", gap:8, marginBottom:4 }}>
+                    <div style={{ display:"flex", gap:6, marginBottom:4, flexWrap:"nowrap", justifyContent:"center" }}>
                       {[0,1,2,3,4,5].map(i => (
                         <input
                           key={i}

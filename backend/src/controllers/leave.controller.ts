@@ -1,5 +1,6 @@
 import { Response } from 'express'
 import LeaveRequest from '../models/LeaveRequest'
+import User from '../models/User'
 import { AuthRequest } from '../middleware/auth'
 import { sendEmail } from '../utils/sendEmail'
 import { syncLeaveAttendance } from './attendance.controller'
@@ -18,6 +19,29 @@ export const submitLeave = async (req: AuthRequest, res: Response) => {
       weekProgress,
       nextPlan
     })
+
+    // Notify all admins in this workspace that a new leave request needs review
+    const admins = await User.find({ workspaceId: req.user!.workspaceId, role: 'admin' })
+    const student = await User.findById(req.user!.userId)
+
+    for (const admin of admins) {
+      await sendEmail({
+        to: admin.email,
+        subject: `🌴 New leave request from ${student?.name || 'a student'}`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+            <h2 style="color: #111;">New Leave Request</h2>
+            <p>Hi ${admin.name},</p>
+            <p><strong>${student?.name || 'A student'}</strong> has requested leave from
+              <strong>${new Date(fromDate).toDateString()}</strong> to
+              <strong>${new Date(toDate).toDateString()}</strong>.</p>
+            <p><em>Reason:</em> ${reason}</p>
+            <p>Please review it in the dashboard.</p>
+            <p style="margin-top:24px;color:#888;font-size:12px;">MeetingMind</p>
+          </div>
+        `,
+      })
+    }
 
     res.status(201).json({ success: true, leave })
   } catch (error: any) {

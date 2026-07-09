@@ -5,7 +5,7 @@ import { sendEmail } from '../utils/sendEmail'
 
 export function startDailyReminderCron() {
   // Runs every day at 8:00 PM IST (14:30 UTC)
-  cron.schedule('30 14 * * *', async () => {
+    cron.schedule('30 14 * * *', async () => {
     console.log('🕐 Daily reminder cron running...')
     try {
       const today = new Date()

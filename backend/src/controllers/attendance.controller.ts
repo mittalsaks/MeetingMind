@@ -154,10 +154,20 @@ export const getAttendance = async (req: AuthRequest, res: Response) => {
       filter.userId = req.user!.userId
     }
     const records = await Attendance.find(filter)
-      .populate('userId', 'name email')
-      .populate('meetingId', 'scheduledDate scheduledTime')
-      .sort({ date: -1 })
-    res.json({ success: true, records })
+  .populate('userId', 'name email')
+  .populate('meetingId', 'scheduledDate scheduledTime')
+  .sort({ date: -1 })
+
+// Frontend heatmap compares record.userId as a plain string ID against
+// student._id. Since populate() replaces userId with the full user object,
+// we flatten it back to a string ID here (keeping populated name/email
+// available separately if ever needed) so the string comparison works.
+const flattened = records.map((r: any) => ({
+  ...r.toObject(),
+  userId: r.userId?._id?.toString() || r.userId,
+}))
+
+res.json({ success: true, records: flattened })
   } catch (error: any) {
     res.status(500).json({ message: error.message })
   }
