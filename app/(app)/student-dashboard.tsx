@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { ListTodo, ClipboardList, CalendarCheck2, CalendarClock, CheckCircle2, History } from "lucide-react"
+import { ListTodo, ClipboardList, CalendarCheck2, CalendarClock, CheckCircle2, History, Video } from "lucide-react"
 import { FadeIn, Stagger } from "@/components/motion"
 import { StatCard } from "@/components/stat-card"
 import { DailyUpdateForm } from "@/components/student/daily-update-form"
@@ -107,6 +107,32 @@ export default function StudentDashboard() {
         </div>
       </FadeIn>
 
+      {upcomingMeeting?.googleMeetLink && upcomingMeeting.status === "confirmed" && (
+        <FadeIn className="mb-6">
+          <a
+            href={upcomingMeeting.googleMeetLink}
+            target="_blank"
+            rel="noreferrer"
+            className="glass flex items-center justify-between gap-3 rounded-2xl border border-primary/30 bg-primary/8 p-4 transition-colors hover:bg-primary/12"
+          >
+            <div className="flex items-center gap-3">
+              <span className="grid size-10 place-items-center rounded-xl bg-primary/15 text-primary ring-1 ring-primary/25">
+                <Video className="size-5" />
+              </span>
+              <div>
+                <p className="text-sm font-semibold">Meeting confirmed — join link ready</p>
+                <p className="text-xs text-muted-foreground">
+                  {new Date(upcomingMeeting.scheduledDate).toDateString()} at {upcomingMeeting.scheduledTime}
+                </p>
+              </div>
+            </div>
+            <span className="whitespace-nowrap rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
+              Join Meeting
+            </span>
+          </a>
+        </FadeIn>
+      )}
+
       <Stagger className="mb-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
         {stats.map((s) => (
           <StatCard
@@ -146,6 +172,16 @@ export default function StudentDashboard() {
                       {new Date(m.scheduledDate).toDateString()} {m.scheduledTime ? `at ${m.scheduledTime}` : ""}
                     </p>
                   </div>
+                  {m.googleMeetLink && m.status === "confirmed" && (
+                    <a
+                      href={m.googleMeetLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="self-center rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-primary transition-colors hover:bg-accent"
+                    >
+                      Join
+                    </a>
+                  )}
                 </div>
               ))}
             </div>
