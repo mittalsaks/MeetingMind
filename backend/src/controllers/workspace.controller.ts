@@ -104,3 +104,37 @@ export const deactivateStudent = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: error.message })
   }
 }
+// @GET /api/workspace (admin only) — fetch current workspace settings
+export const getWorkspace = async (req: AuthRequest, res: Response) => {
+  try {
+    const workspace = await Workspace.findById(req.user!.workspaceId)
+    if (!workspace) return res.status(404).json({ message: 'Workspace not found' })
+
+    res.json({ success: true, workspace })
+  } catch (error: any) {
+    res.status(500).json({ message: error.message })
+  }
+}
+
+// @PUT /api/workspace (admin only) — update workspace settings
+export const updateWorkspace = async (req: AuthRequest, res: Response) => {
+  try {
+    const { name, url, timezone, weekStart } = req.body
+
+    if (!name || !timezone || !weekStart) {
+      return res.status(400).json({ message: 'Missing required fields' })
+    }
+
+    const workspace = await Workspace.findByIdAndUpdate(
+      req.user!.workspaceId,
+      { name, url, timezone, weekStart },
+      { new: true }
+    )
+
+    if (!workspace) return res.status(404).json({ message: 'Workspace not found' })
+
+    res.json({ success: true, message: 'Workspace updated', workspace })
+  } catch (error: any) {
+    res.status(500).json({ message: error.message })
+  }
+}

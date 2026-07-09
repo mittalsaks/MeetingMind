@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type ReactNode } from "react"
+import { useState, useEffect, type ReactNode } from "react"
 import { PageHeader } from "@/components/features/page-header"
 import { PageTransition } from "@/components/features/motion"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -29,7 +29,15 @@ import {
   Check,
 } from "lucide-react"
 import { members, getTeam } from "@/lib/mock-data"
-
+// Yeh naya function ADD karo (already existing kuch nahi hata)
+function getAllTimezones(): string[] {
+  // @ts-ignore
+  if (typeof Intl.supportedValuesOf === "function") {
+    // @ts-ignore
+    return Intl.supportedValuesOf("timeZone")
+  }
+  return ["Asia/Kolkata", "America/New_York", "Europe/London"]
+}
 function SectionCard({
   title,
   description,
@@ -95,10 +103,33 @@ export default function SettingsPage() {
   // ── Workspace tab state ──
   const [wsName, setWsName] = useState("Acme Inc.")
   const [wsUrl, setWsUrl] = useState("acme.meetingmind.app")
-  const [timezone, setTimezone] = useState("America / New York")
+  const [timezone, setTimezone] = useState<string>(
+  () => Intl.DateTimeFormat().resolvedOptions().timeZone
+)
   const [weekStart, setWeekStart] = useState("Monday")
   const [saved, setSaved] = useState(false)
-
+// Yeh do lines NAYI add karo
+const [loading, setLoading] = useState(true)
+const [saving, setSaving] = useState(false)
+// Yeh poora block NAYA add karo
+useEffect(() => {
+  async function loadWorkspace() {
+    try {
+      const res = await fetch("/api/workspace", { credentials: "include" })
+      if (!res.ok) throw new Error("Failed to load workspace")
+      const data = await res.json()
+setWsName(data.workspace.name)
+setWsUrl(data.workspace.url)
+setTimezone(data.workspace.timezone)
+setWeekStart(data.workspace.weekStart)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
+  loadWorkspace()
+}, [])
   // ── Roles tab state ──
   const [memberRoles, setMemberRoles] = useState<Record<string, string>>(
     Object.fromEntries(
@@ -109,11 +140,25 @@ export default function SettingsPage() {
   // ── Integrations tab state ──
   const [integrations, setIntegrations] = useState(initialIntegrations)
 
-  function handleSaveWorkspace() {
-    // TODO: wire to backend PUT /api/workspace when endpoint is ready
+  async function handleSaveWorkspace() {
+  setSaving(true)
+  try {
+    const res = await fetch("/api/workspace", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ name: wsName, url: wsUrl, timezone, weekStart }),
+    })
+    if (!res.ok) throw new Error("Save failed")
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
+  } catch (err) {
+    console.error(err)
+    alert("Save failed, please try again")
+  } finally {
+    setSaving(false)
   }
+}
 
   function toggleIntegration(name: string) {
     setIntegrations((prev) =>
@@ -170,12 +215,14 @@ export default function SettingsPage() {
                     <SelectTrigger className="w-full bg-background/40">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="America / New York">America / New York</SelectItem>
-                      <SelectItem value="America / Los Angeles">America / Los Angeles</SelectItem>
-                      <SelectItem value="Europe / London">Europe / London</SelectItem>
-                      <SelectItem value="Asia / Singapore">Asia / Singapore</SelectItem>
-                    </SelectContent>
+                    <SelectContent className="max-h-64">
+  {getAllTimezones().map((tz) => (
+    <SelectItem key={tz} value={tz}>
+      {tz.replace(/_/g, " ")}
+    </SelectItem>
+  ))}
+</SelectContent>
+
                   </Select>
                 </div>
                 <div className="space-y-2">
@@ -198,10 +245,11 @@ export default function SettingsPage() {
                     <Check className="size-3.5" /> Saved
                   </span>
                 )}
-                <Button size="sm" onClick={handleSaveWorkspace}>
-                  Save changes
-                </Button>
+                <Button size="sm" onClick={handleSaveWorkspace} disabled={saving}>
+                    {saving ? "Saving..." : "Save changes"}
+                  </Button>
               </div>
+
             </SectionCard>
           </TabsContent>
 
