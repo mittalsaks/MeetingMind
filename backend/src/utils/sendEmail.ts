@@ -27,8 +27,8 @@ export const sendEmail = async ({ to, subject, html }: EmailOptions) => {
 
     const transporter = nodemailer.createTransport({
       host: ip,
-      port: 587,
-      secure: false,
+      port: 465,
+      secure: true,
       tls: {
         servername: 'smtp.gmail.com'
       },
