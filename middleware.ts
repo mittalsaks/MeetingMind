@@ -4,7 +4,7 @@ import type { NextRequest } from 'next/server'
 const publicPaths = ['/login', '/register', '/forgot-password', '/accept-invite', '/backend', '/auth/google', '/google-success', '/onboarding']
 
 // Routes that ONLY mentors/admins should access
-const adminOnlyPaths = ['/team', '/students', '/settings']
+const adminOnlyPaths = ['/team', '/students', '/settings', '/install-extension', '/analytics', '/archive']
 
 export function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname

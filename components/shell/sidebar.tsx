@@ -16,7 +16,7 @@ export function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
   const router = useRouter()
   const { user, logout } = useAuthStore()
   const rawRole = (user?.role || "").toString().toLowerCase()
-  const role = (rawRole.includes("student") ? "student" : "admin") as "admin" | "student"
+const role = (rawRole === "admin" ? "admin" : "student") as "admin" | "student"
   const visibleNavItems = navItems.filter(item => !item.roles || item.roles.includes(role))
   // ── original logout logic — untouched
   const handleLogout = async () => {
