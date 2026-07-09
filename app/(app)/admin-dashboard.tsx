@@ -122,15 +122,15 @@ export default function AdminDashboard() {
           progress: stats.totalStudents > 0 ? Math.round((stats.missingToday / stats.totalStudents) * 100) : 0,
         },
         {
-          key: "meeting",
-          label: "Upcoming Meeting",
-          value: stats.upcomingMeeting
-            ? new Date(stats.upcomingMeeting.date!).toLocaleDateString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" })
-            : "None",
-          hint: stats.upcomingMeeting?.title ?? "Check meetings tab",
-          tone: "primary" as const,
-          icon: CalendarClock,
-        },
+  key: "meeting",
+  label: "Upcoming Meeting",
+  value: stats.upcomingMeeting?.date && !isNaN(new Date(stats.upcomingMeeting.date).getTime())
+    ? new Date(stats.upcomingMeeting.date).toLocaleDateString("en-US", { weekday: "short", hour: "numeric", minute: "2-digit" })
+    : "None",
+  hint: stats.upcomingMeeting?.title ?? "Check meetings tab",
+  tone: "primary" as const,
+  icon: CalendarClock,
+},
         {
           key: "pending",
           label: "Pending Commitments",
