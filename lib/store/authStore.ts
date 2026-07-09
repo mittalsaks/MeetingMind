@@ -13,6 +13,7 @@ interface AuthState {
   user: User | null
   accessToken: string | null
   isAuthenticated: boolean
+  hasHydrated: boolean
   setAuth: (user: User, accessToken: string) => void
   logout: () => void
   hydrate: () => void
@@ -22,10 +23,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   accessToken: null,
   isAuthenticated: false,
+  hasHydrated: false,
   setAuth: (user, accessToken) => {
     sessionStorage.setItem('accessToken', accessToken)
     sessionStorage.setItem('user', JSON.stringify(user))
-    // No max-age = session cookie, auto-clears when the browser closes
     document.cookie = 'hasSession=true; path=/'
     document.cookie = `userRole=${user.role}; path=/`
     set({ user, accessToken, isAuthenticated: true })
@@ -42,8 +43,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     const userStr = sessionStorage.getItem('user')
     if (token && userStr) {
       try {
-        set({ user: JSON.parse(userStr), accessToken: token, isAuthenticated: true })
+        set({ user: JSON.parse(userStr), accessToken: token, isAuthenticated: true, hasHydrated: true })
+        return
       } catch {}
     }
+    set({ hasHydrated: true })
   }
 }))
