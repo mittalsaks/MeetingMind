@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="./logo/icon.png" alt="MeetingMind Logo" width="140"/>
+<img src="./app/icon.png" alt="MeetingMind Logo" width="140"/>
 
 # MeetingMind
 
@@ -39,28 +39,23 @@ None of this scales past a handful of people — and it's exactly the kind of re
 
 ### Core Innovation: Live Meeting → Structured Accountability, Automatically
 
-```
-Student speaks during Google Meet
-        │
-        ▼
-Chrome Extension captures live captions (speaker + text)
-        │
-        ▼
-Transcript streamed to backend in real time
-        │
-        ▼
-AI extracts: completed work · next commitment · deadline
-        │
-        ▼
-   ┌────────────┴────────────┐
-   │                         │
-Task auto-created      Attendance marked
-(assigned to student)  (only if they actually spoke)
-   │                         │
-   └────────────┬────────────┘
-                ▼
-   Mentor dashboard updates instantly —
-   zero manual note-taking
+```mermaid
+flowchart TD
+    A["🗣️ Student speaks during Google Meet"] --> B["🎧 Chrome Extension captures<br/>live captions — speaker + text"]
+    B --> C["📡 Transcript streamed<br/>to backend in real time"]
+    C --> D["🤖 AI extracts commitment<br/>completed work · next task · deadline"]
+    D --> E["📋 Task auto-created<br/>assigned to the right student"]
+    D --> F["✅ Attendance marked<br/>only if they actually spoke"]
+    E --> G["📊 Mentor dashboard updates instantly<br/>zero manual note-taking"]
+    F --> G
+
+    style A fill:#1a1a2e,stroke:#6366F1,color:#fff,stroke-width:2px
+    style B fill:#1a1a2e,stroke:#6366F1,color:#fff,stroke-width:2px
+    style C fill:#1a1a2e,stroke:#8B5CF6,color:#fff,stroke-width:2px
+    style D fill:#2d1b4e,stroke:#A78BFA,color:#fff,stroke-width:3px
+    style E fill:#0f2e23,stroke:#22C55E,color:#fff,stroke-width:2px
+    style F fill:#0f2e23,stroke:#22C55E,color:#fff,stroke-width:2px
+    style G fill:#1a1a2e,stroke:#6366F1,color:#fff,stroke-width:3px
 ```
 
 Attendance in MeetingMind isn't "did you join the call" — it's **"did you actually give a spoken update."** Silent attendees are marked absent, exactly like a real mentor would judge it.
