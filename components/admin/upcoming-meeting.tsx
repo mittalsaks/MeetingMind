@@ -1,12 +1,89 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { CalendarClock, Check, RotateCcw, X, Video } from "lucide-react"
+import { CalendarClock, Check, Loader2, Video } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import api from "@/lib/api/axios"
+
+interface Meeting {
+  _id: string
+  scheduledDate: string
+  scheduledTime: string
+  googleMeetLink?: string
+  status: "scheduled" | "confirmed" | "rescheduled" | "completed" | "cancelled"
+  totalInvited: number
+}
+
+function formatDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString("en-US", { weekday: "long" })
+}
+
+function meetingDateTime(m: Meeting) {
+  return new Date(`${new Date(m.scheduledDate).toISOString().slice(0, 10)}T${m.scheduledTime}`).getTime()
+}
 
 export function UpcomingMeeting() {
-  const [status, setStatus] = useState<"idle" | "confirmed" | "cancelled">("idle")
+  const [meeting, setMeeting] = useState<Meeting | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [confirming, setConfirming] = useState(false)
+
+  async function load() {
+    try {
+      const res = await api.get("/meetings")
+      const meetings: Meeting[] = res.data?.meetings || []
+      const now = Date.now()
+      const upcoming = meetings
+        .filter((m) => (m.status === "scheduled" || m.status === "confirmed") && meetingDateTime(m) >= now)
+        .sort((a, b) => meetingDateTime(a) - meetingDateTime(b))[0]
+      setMeeting(upcoming || null)
+    } catch (err) {
+      console.error("Failed to load upcoming meeting", err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    load()
+  }, [])
+
+  async function handleConfirm() {
+    if (!meeting) return
+    setConfirming(true)
+    try {
+      await api.put(`/meetings/${meeting._id}/confirm`)
+      await load()
+    } catch (err) {
+      console.error("Failed to confirm meeting", err)
+    } finally {
+      setConfirming(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="glass relative overflow-hidden rounded-2xl border border-border p-5">
+        <p className="text-sm text-muted-foreground">Loading meeting...</p>
+      </div>
+    )
+  }
+
+  if (!meeting) {
+    return (
+      <div className="glass relative overflow-hidden rounded-2xl border border-border p-5">
+        <div className="flex items-center gap-3">
+          <span className="grid size-11 place-items-center rounded-xl bg-primary/15 text-primary ring-1 ring-primary/25">
+            <CalendarClock className="size-5" />
+          </span>
+          <div>
+            <h2 className="text-sm font-semibold">Upcoming Weekly Meeting</h2>
+            <p className="text-xs text-muted-foreground">No meeting scheduled</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="glass relative overflow-hidden rounded-2xl border border-border p-5">
@@ -18,11 +95,11 @@ export function UpcomingMeeting() {
           </span>
           <div>
             <h2 className="text-sm font-semibold">Upcoming Weekly Meeting</h2>
-            <p className="text-xs text-muted-foreground">Cohort B · Google Meet</p>
+            <p className="text-xs text-muted-foreground">{meeting.totalInvited} students invited</p>
           </div>
         </div>
         <AnimatePresence mode="wait">
-          {status === "confirmed" && (
+          {meeting.status === "confirmed" && (
             <motion.span
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -31,45 +108,34 @@ export function UpcomingMeeting() {
               Confirmed
             </motion.span>
           )}
-          {status === "cancelled" && (
-            <motion.span
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="rounded-full bg-danger/15 px-2.5 py-1 text-[11px] font-medium text-danger"
-            >
-              Cancelled
-            </motion.span>
-          )}
         </AnimatePresence>
       </div>
 
       <div className="mt-5 flex items-end gap-3">
-        <p className="text-3xl font-semibold tracking-tight">Thursday</p>
-        <p className="pb-1 text-lg font-medium text-primary">6:00 PM</p>
+        <p className="text-3xl font-semibold tracking-tight">{formatDate(meeting.scheduledDate)}</p>
+        <p className="pb-1 text-lg font-medium text-primary">{meeting.scheduledTime}</p>
       </div>
-      <p className="mt-1 text-xs text-muted-foreground">8 students invited · transcript auto-capture enabled</p>
 
       <div className="mt-5 flex flex-wrap gap-2">
-        <Button size="sm" className="gap-1.5" onClick={() => setStatus("confirmed")}>
-          <Check className="size-4" /> Confirm Meeting
-        </Button>
-        <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setStatus("idle")}>
-          <RotateCcw className="size-4" /> Reschedule
-        </Button>
-        <Button
-          size="sm"
-          variant="ghost"
-          className="gap-1.5 text-danger hover:bg-danger/10 hover:text-danger"
-          onClick={() => setStatus("cancelled")}
-        >
-          <X className="size-4" /> Cancel
-        </Button>
+        {meeting.status === "scheduled" && (
+          <Button size="sm" className="gap-1.5" onClick={handleConfirm} disabled={confirming}>
+            {confirming ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+            Confirm Meeting
+          </Button>
+        )}
       </div>
 
-      <div className="mt-4 flex items-center gap-2 rounded-xl border border-border bg-card/40 px-3 py-2 text-xs text-muted-foreground">
-        <Video className="size-4 text-primary" />
-        Join link shared automatically 10 minutes before start.
-      </div>
+      {meeting.googleMeetLink && (
+        <a
+          href={meeting.googleMeetLink}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-4 flex items-center gap-2 rounded-xl border border-border bg-card/40 px-3 py-2 text-xs text-muted-foreground transition-colors hover:bg-accent"
+        >
+          <Video className="size-4 text-primary" />
+          Join link
+        </a>
+      )}
     </div>
   )
 }
