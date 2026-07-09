@@ -17,7 +17,7 @@ export default function DashboardRouter() {
     // Thoda wait karo phir redirect karo
     const timer = setTimeout(() => {
       if (!isAuthenticated || !user) {
-        router.replace("/auth/login")
+        router.replace("/login")
       }
     }, 300) // store hydration ke liye thoda time
 
