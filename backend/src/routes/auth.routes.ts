@@ -8,6 +8,7 @@ import {
   forgotPassword,
   verifyOtp,
   resetPassword,
+  directResetPassword,
   logout,
   googleCallback,
   completeOnboarding
@@ -21,6 +22,7 @@ router.post('/refresh-token', refreshToken)
 router.post('/forgot-password', forgotPassword)
 router.post('/verify-otp', verifyOtp)
 router.post('/reset-password', resetPassword)
+router.post('/forgot-password-direct', directResetPassword)
 router.post('/logout', logout)
 router.post('/complete-onboarding', protect, completeOnboarding)
 router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'], session: false, prompt: 'select_account' }))
