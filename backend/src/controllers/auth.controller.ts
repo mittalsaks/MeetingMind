@@ -151,6 +151,11 @@ const accessToken = generateAccessToken(user._id.toString(), user.role, safeWork
 }
 
 // @POST /api/auth/forgot-password
+// TEMP (for demo, until Resend domain is verified): the OTP is echoed back
+// in the API response and logged to the server console, so the flow works
+// end-to-end even when the email never arrives. Remove `otp` from the JSON
+// response (and ideally the console.log) once real email delivery works —
+// leaking the OTP in the response is not safe for real production use.
 export const forgotPassword = async (req: Request, res: Response) => {
   try {
     const { email } = req.body
@@ -162,14 +167,20 @@ export const forgotPassword = async (req: Request, res: Response) => {
     user.forgotPasswordExpiry = new Date(Date.now() + 15 * 60 * 1000)
     await user.save()
 
-    // Email bhejenge next step mein
-    await sendEmail({
+    console.log(`🔑 [DEMO] Password reset OTP for ${email}: ${otp}`)
+
+    // Still attempt email — but don't let a delivery failure block the flow.
+    sendEmail({
       to: email,
       subject: 'MeetingMind - Password Reset OTP',
       html: `<p>Your OTP for password reset is: <strong>${otp}</strong></p><p>This OTP expires in 15 minutes.</p>`
-    })
+    }).catch(() => {})
 
-    res.json({ success: true, message: 'OTP sent to email' })
+    res.json({
+      success: true,
+      message: 'OTP generated',
+      otp // TEMP: remove once email delivery is fixed
+    })
   } catch (error: any) {
     res.status(500).json({ message: error.message })
   }
@@ -188,6 +199,33 @@ export const verifyOtp = async (req: Request, res: Response) => {
     if (!user) return res.status(400).json({ message: 'Invalid or expired OTP' })
 
     res.json({ success: true, message: 'OTP verified' })
+  } catch (error: any) {
+    res.status(500).json({ message: error.message })
+  }
+}
+
+// @POST /api/auth/forgot-password-direct
+// TEMP (until email delivery is fixed): skips the OTP step entirely — just
+// email + new password, straight update. Not secure for real production
+// (anyone who knows an email can reset that account's password), but works
+// for a demo where email isn't reaching users yet. Swap back to the OTP
+// flow (forgotPassword + verifyOtp + resetPassword above) once email works.
+export const directResetPassword = async (req: Request, res: Response) => {
+  try {
+    const { email, newPassword } = req.body
+    if (!email || !newPassword) {
+      return res.status(400).json({ message: 'Email and new password are required' })
+    }
+
+    const user = await User.findOne({ email })
+    if (!user) return res.status(404).json({ message: 'User not found' })
+
+    user.password = newPassword
+    user.forgotPasswordToken = undefined
+    user.forgotPasswordExpiry = undefined
+    await user.save()
+
+    res.json({ success: true, message: 'Password reset successful' })
   } catch (error: any) {
     res.status(500).json({ message: error.message })
   }

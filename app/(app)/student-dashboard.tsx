@@ -81,6 +81,13 @@ export default function StudentDashboard() {
     .filter((m) => (m.status === "scheduled" || m.status === "confirmed") && meetingDateTime(m) >= Date.now())
     .sort((a, b) => meetingDateTime(a) - meetingDateTime(b))[0] || null
 
+  // Meeting History should only show meetings that have actually happened —
+  // previously this listed every meeting (including future/duplicate test
+  // ones), which made the "history" list confusing and out of order.
+  const pastMeetings = meetings
+    .filter((m) => meetingDateTime(m) < Date.now())
+    .sort((a, b) => meetingDateTime(b) - meetingDateTime(a))
+
   const stats = [
     { key: "today", label: "Today's Tasks", value: pendingTasks.length, tone: "primary", hint: "Pending / in progress" },
     { key: "pending", label: "Pending Commitments", value: pendingCommitments.length, tone: "warning", hint: "From weekly syncs" },
@@ -165,12 +172,12 @@ export default function StudentDashboard() {
               <p className="text-xs text-muted-foreground">Your previous meetings</p>
             </div>
           </div>
-          {meetings.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No meetings yet.</p>
+          {pastMeetings.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No past meetings yet.</p>
           ) : (
             <div className="relative space-y-1">
               <span className="absolute bottom-2 left-[7px] top-2 w-px bg-border" aria-hidden />
-              {meetings.slice(0, 5).map((m: any) => (
+              {pastMeetings.slice(0, 5).map((m: any) => (
                 <div key={m._id} className="relative flex gap-4 rounded-lg p-2 transition-colors hover:bg-accent/40">
                   <span className="relative z-10 mt-1.5 size-3.5 shrink-0 rounded-full border-2 border-success bg-background" />
                   <div className="flex-1">
@@ -179,16 +186,6 @@ export default function StudentDashboard() {
                       {new Date(m.scheduledDate).toDateString()} {m.scheduledTime ? `at ${m.scheduledTime}` : ""}
                     </p>
                   </div>
-                  {m.googleMeetLink && m.status === "confirmed" && (
-                    <a
-                      href={m.googleMeetLink}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="self-center rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-primary transition-colors hover:bg-accent"
-                    >
-                      Join
-                    </a>
-                  )}
                 </div>
               ))}
             </div>

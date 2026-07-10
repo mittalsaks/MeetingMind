@@ -16,6 +16,10 @@ export const authApi = {
   resetPassword: (email: string, otp: string, newPassword: string) =>
     api.post('/auth/reset-password', { email, otp, newPassword }),
 
+  // TEMP: OTP-free reset while email delivery is being fixed.
+  directResetPassword: (email: string, newPassword: string) =>
+    api.post('/auth/forgot-password-direct', { email, newPassword }),
+
   logout: () => api.post('/auth/logout'),
 
   acceptInvite: (token: string, password: string) =>

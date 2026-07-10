@@ -6,10 +6,9 @@ import { BrainCircuit, Mail, Lock, Loader2, CheckCircle2 } from "lucide-react"
 import { authApi } from "@/lib/api/auth"
 
 export default function ForgotPasswordPage() {
-  // ── original state ──
-  const [step, setStep] = useState<"email" | "otp" | "reset" | "done">("email")
+  // ── original state ── (OTP step removed for now — see directResetPassword)
+  const [step, setStep] = useState<"email" | "reset" | "done">("email")
   const [email, setEmail] = useState("")
-  const [otp, setOtp] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [loading, setLoading] = useState(false)
@@ -20,7 +19,6 @@ export default function ForgotPasswordPage() {
   const cardRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const rafRef = useRef<number>(0)
-  const otpRefs = useRef<(HTMLInputElement | null)[]>([])
 
   useEffect(() => {
     const t = setTimeout(() => setCardReady(true), 80)
@@ -80,44 +78,31 @@ export default function ForgotPasswordPage() {
     card.style.transform = "perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1,1,1)"
   }, [])
 
-  // OTP box handlers
-  const handleOtpChange = (i: number, val: string) => {
-    if (!/^\d*$/.test(val)) return
-    const arr = otp.split("")
-    arr[i] = val.slice(-1)
-    const next = arr.join("").padEnd(6, "").slice(0, 6)
-    setOtp(next)
-    if (val && i < 5) otpRefs.current[i + 1]?.focus()
-  }
-  const handleOtpKeyDown = (i: number, e: React.KeyboardEvent) => {
-    if (e.key === "Backspace" && !otp[i] && i > 0) otpRefs.current[i - 1]?.focus()
-  }
-
-  // ── original handlers ──
-  const handleSendOtp = async (e: React.FormEvent) => {
-    e.preventDefault(); setError(""); setLoading(true)
-    try { await authApi.forgotPassword(email); setStep("otp") }
-    catch (err: any) { setError(err.response?.data?.message || "Something went wrong") }
-    finally { setLoading(false) }
-  }
-
-  const handleVerifyOtp = async (e: React.FormEvent) => {
-    e.preventDefault(); setError(""); setLoading(true)
-    try { await authApi.verifyOtp(email, otp); setStep("reset") }
-    catch (err: any) { setError(err.response?.data?.message || "Invalid OTP") }
-    finally { setLoading(false) }
+  // ── handlers ── (OTP step skipped — jumps straight from email to reset)
+  const handleContinue = async (e: React.FormEvent) => {
+    e.preventDefault(); setError(""); setStep("reset")
   }
 
   const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault(); setError(""); setLoading(true)
-    try { await authApi.resetPassword(email, otp, newPassword); setStep("done") }
-    catch (err: any) { setError(err.response?.data?.message || "Something went wrong") }
-    finally { setLoading(false) }
+    e.preventDefault(); setError("")
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match")
+      return
+    }
+    setLoading(true)
+    try {
+      await authApi.directResetPassword(email, newPassword)
+      setStep("done")
+    } catch (err: any) {
+      setError(err.response?.data?.message || "Something went wrong")
+    } finally {
+      setLoading(false)
+    }
   }
 
   // step index for progress track
-  const stepIndex = { email: 0, otp: 1, reset: 2, done: 3 }[step]
-  const trackSteps = ["Email", "OTP", "Reset"]
+  const stepIndex = { email: 0, reset: 1, done: 2 }[step]
+  const trackSteps = ["Email", "Reset"]
 
   return (
     <>
@@ -155,28 +140,6 @@ export default function ForgotPasswordPage() {
           border-color:rgba(255,255,255,0.28);
           background:rgba(255,255,255,0.06);
           box-shadow:0 0 0 3px rgba(255,255,255,0.05);
-        }
-
-        .fp-otp-box {
-          flex: 1 1 0;
-          min-width: 0;
-          max-width: 52px;
-          height:52px;
-          background:rgba(255,255,255,0.04);
-          border:1px solid rgba(255,255,255,0.08);
-          border-radius:12px; color:#fff;
-          font-size:20px; font-weight:700; text-align:center;
-          outline:none; transition:all 0.2s; font-family:inherit;
-          -webkit-appearance:none;
-        }
-        .fp-otp-box:focus{
-          border-color:rgba(255,255,255,0.35);
-          background:rgba(255,255,255,0.07);
-          box-shadow:0 0 0 3px rgba(255,255,255,0.06);
-        }
-        .fp-otp-box.filled{
-          border-color:rgba(255,255,255,0.2);
-          background:rgba(255,255,255,0.06);
         }
 
         .fp-sbtn {
@@ -257,7 +220,7 @@ export default function ForgotPasswordPage() {
               {step !== "done" && (
                 <div style={{ display:"flex", alignItems:"center", marginBottom:28, animation:"fu 0.4s 0.15s both" }}>
                   {trackSteps.map((label, i) => (
-                    <div key={i} style={{ display:"flex", alignItems:"center", flex: i < 2 ? 1 : "none" }}>
+                    <div key={i} style={{ display:"flex", alignItems:"center", flex: i < 1 ? 1 : "none" }}>
                       <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:5 }}>
                         <div style={{
                           width:32, height:32, borderRadius:"50%",
@@ -277,7 +240,7 @@ export default function ForgotPasswordPage() {
                           transition:"color 0.4s",
                         }}>{label}</span>
                       </div>
-                      {i < 2 && (
+                      {i < 1 && (
                         <div style={{
                           flex:1, height:1, margin:"0 6px 16px",
                           background: i < stepIndex ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.07)",
@@ -293,51 +256,19 @@ export default function ForgotPasswordPage() {
               {step === "email" && (
                 <div className="fp-step-content">
                   <h1 style={{ fontSize:26, fontWeight:800, color:"#fff", letterSpacing:"-0.03em", marginBottom:6 }}>Forgot password?</h1>
-                  <p style={{ fontSize:14, color:"#444", marginBottom:18 }}>We'll send a 6-digit OTP to your email</p>
+                  <p style={{ fontSize:14, color:"#444", marginBottom:18 }}>Enter your email to reset your password</p>
                   <div className="fp-hint">
                     <CheckCircle2 style={{ width:13, height:13, color:"rgba(255,255,255,0.2)", flexShrink:0, marginTop:1 }} />
                     <p>Enter the email address associated with your MeetingMind workspace.</p>
                   </div>
-                  <form onSubmit={handleSendOtp} style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                  <form onSubmit={handleContinue} style={{ display:"flex", flexDirection:"column", gap:10 }}>
                     <div style={{ position:"relative" }}>
                       <Mail style={{ position:"absolute", left:14, top:"50%", transform:"translateY(-50%)", width:15, height:15, color:"rgba(255,255,255,0.22)", pointerEvents:"none" }} />
                       <input type="email" placeholder="Email address" value={email} onChange={e => setEmail(e.target.value)} required className="fp-inp" />
                     </div>
                     {error && <p style={{ fontSize:13, color:"#ef4444", margin:0 }}>{error}</p>}
                     <button type="submit" disabled={loading} className="fp-sbtn">
-                      {loading ? <Loader2 style={{ width:18, height:18, animation:"spin 1s linear infinite" }} /> : "Send OTP →"}
-                    </button>
-                  </form>
-                </div>
-              )}
-
-              {/* ── STEP: OTP ── */}
-              {step === "otp" && (
-                <div className="fp-step-content">
-                  <h1 style={{ fontSize:26, fontWeight:800, color:"#fff", letterSpacing:"-0.03em", marginBottom:6 }}>Enter OTP</h1>
-                  <p style={{ fontSize:14, color:"#444", marginBottom:18 }}>We sent a 6-digit code to <span style={{ color:"#777" }}>{email}</span></p>
-                  <form onSubmit={handleVerifyOtp} style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                    {/* OTP boxes */}
-                    <div style={{ display:"flex", gap:6, marginBottom:4, flexWrap:"nowrap", justifyContent:"center" }}>
-                      {[0,1,2,3,4,5].map(i => (
-                        <input
-                          key={i}
-                          ref={el => { otpRefs.current[i] = el }}
-                          type="text" inputMode="numeric" maxLength={1}
-                          value={otp[i] || ""}
-                          onChange={e => handleOtpChange(i, e.target.value)}
-                          onKeyDown={e => handleOtpKeyDown(i, e)}
-                          className={`fp-otp-box${otp[i] ? " filled" : ""}`}
-                        />
-                      ))}
-                    </div>
-                    <div className="fp-hint">
-                      <CheckCircle2 style={{ width:13, height:13, color:"rgba(255,255,255,0.2)", flexShrink:0, marginTop:1 }} />
-                      <p>OTP expires in <strong style={{ color:"#666" }}>15 minutes</strong>. Check spam if not received.</p>
-                    </div>
-                    {error && <p style={{ fontSize:13, color:"#ef4444", margin:0 }}>{error}</p>}
-                    <button type="submit" disabled={loading || otp.length < 6} className="fp-sbtn">
-                      {loading ? <Loader2 style={{ width:18, height:18, animation:"spin 1s linear infinite" }} /> : "Verify OTP →"}
+                      Continue →
                     </button>
                   </form>
                 </div>
@@ -347,7 +278,7 @@ export default function ForgotPasswordPage() {
               {step === "reset" && (
                 <div className="fp-step-content">
                   <h1 style={{ fontSize:26, fontWeight:800, color:"#fff", letterSpacing:"-0.03em", marginBottom:6 }}>New password</h1>
-                  <p style={{ fontSize:14, color:"#444", marginBottom:18 }}>Choose a strong password</p>
+                  <p style={{ fontSize:14, color:"#444", marginBottom:18 }}>Choose a strong password for <span style={{ color:"#777" }}>{email}</span></p>
                   <form onSubmit={handleResetPassword} style={{ display:"flex", flexDirection:"column", gap:10 }}>
                     <div style={{ position:"relative" }}>
                       <Lock style={{ position:"absolute", left:14, top:"50%", transform:"translateY(-50%)", width:15, height:15, color:"rgba(255,255,255,0.22)", pointerEvents:"none" }} />
