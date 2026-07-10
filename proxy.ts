@@ -6,7 +6,7 @@ const publicPaths = ['/login', '/register', '/forgot-password', '/accept-invite'
 // Routes that ONLY mentors/admins should access
 const adminOnlyPaths = ['/team', '/students', '/settings', '/install-extension', '/analytics', '/archive']
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname
   const isPublicPath = publicPaths.some((p) => path.startsWith(p))
   const hasSession = request.cookies.get('hasSession')?.value === 'true'
@@ -36,6 +36,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-   matcher: ['/((?!api|_next/static|_next/image|favicon.ico|backend).*)'],
-  runtime: 'nodejs',
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|backend).*)']
 }
