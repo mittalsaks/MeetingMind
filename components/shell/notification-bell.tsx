@@ -88,7 +88,7 @@ export function NotificationBell() {
     if (item.link) {
       const link = item.link
       setTimeout(() => {
-        router.push(link)
+        window.location.href = link
       }, 150)
     }
   }
@@ -146,3 +146,4 @@ export function NotificationBell() {
     </DropdownMenu>
   )
 }
+
