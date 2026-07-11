@@ -24,7 +24,7 @@ const headerSub = document.getElementById('header-sub')
 // ── Init ──
 chrome.storage.local.get(['mm_token', 'mm_user', 'mm_meeting', 'mm_recording'], (data) => {
   if (data.mm_token && data.mm_user) {
-    showLoggedIn(data.mm_user, data.mm_meeting)
+    fetchActiveMeeting(data.mm_token, data.mm_user)
     if (data.mm_recording) setRecordingUI()
   } else {
     showLogin()
