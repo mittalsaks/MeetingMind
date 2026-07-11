@@ -1,4 +1,10 @@
-﻿import nodemailer from 'nodemailer'
+﻿import * as brevo from '@getbrevo/brevo'
+
+const apiInstance = new brevo.TransactionalEmailsApi()
+apiInstance.setApiKey(
+  brevo.TransactionalEmailsApiApiKeys.apiKey,
+  process.env.BREVO_API_KEY!
+)
 
 interface EmailOptions {
   to: string
@@ -6,24 +12,15 @@ interface EmailOptions {
   html: string
 }
 
-const transporter = nodemailer.createTransport({
-  host: 'smtp-relay.brevo.com',
-  port: 587,
-  secure: false,
-  auth: {
-    user: process.env.BREVO_SMTP_USER,
-    pass: process.env.BREVO_SMTP_PASS,
-  },
-})
-
 export const sendEmail = async ({ to, subject, html }: EmailOptions) => {
   try {
-    await transporter.sendMail({
-      from: `"MeetingMind" <${process.env.BREVO_SENDER_EMAIL}>`,
-      to,
-      subject,
-      html,
-    })
+    const sendSmtpEmail = new brevo.SendSmtpEmail()
+    sendSmtpEmail.subject = subject
+    sendSmtpEmail.htmlContent = html
+    sendSmtpEmail.sender = { name: 'MeetingMind', email: process.env.BREVO_SENDER_EMAIL! }
+    sendSmtpEmail.to = [{ email: to }]
+
+    await apiInstance.sendTransacEmail(sendSmtpEmail)
     console.log(`Email sent to ${to}`)
     return true
   } catch (error) {
