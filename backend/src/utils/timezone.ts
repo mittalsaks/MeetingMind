@@ -17,3 +17,16 @@ export function getISTDayBounds(refDate: Date = new Date()) {
 
   return { startOfDay, endOfDay }
 }
+
+// scheduledDate (date-only) + scheduledTime ("HH:mm", IST wall-clock) ko
+// ek sahi UTC Date instant me combine karta hai. scheduledTime hamesha
+// IST maana jata hai (jaisa Settings > Timezone: Asia/Calcutta batata hai).
+export function combineMeetingDateTime(scheduledDate: Date | string, scheduledTime: string): Date {
+  const dateOnly = new Date(scheduledDate).toISOString().slice(0, 10) // "YYYY-MM-DD" (UTC date part)
+  const [hours, minutes] = scheduledTime.split(":").map(Number)
+  const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000
+  const [y, m, d] = dateOnly.split("-").map(Number)
+  // IST wall-clock time ko UTC instant me convert karo
+  const utcMs = Date.UTC(y, m - 1, d, hours, minutes, 0, 0) - IST_OFFSET_MS
+  return new Date(utcMs)
+}

@@ -1,6 +1,6 @@
 ﻿import { Response } from 'express'
 import { AuthRequest } from '../middleware/auth'
-import { getISTDayBounds } from '../utils/timezone'
+import { getISTDayBounds, combineMeetingDateTime } from '../utils/timezone'
 import User from '../models/User'
 import Task from '../models/Task'
 import DailyUpdate from '../models/DailyUpdate'
@@ -60,9 +60,7 @@ export const getAdminStats = async (req: AuthRequest, res: Response) => {
     // fields off the string, always falling back to "None".
     let upcomingMeetingPayload: { title?: string; date?: string } | null = null
     if (upcomingMeeting) {
-      const combined = new Date(
-        `${new Date(upcomingMeeting.scheduledDate).toISOString().slice(0, 10)}T${upcomingMeeting.scheduledTime}`
-      )
+      const combined = combineMeetingDateTime(upcomingMeeting.scheduledDate, upcomingMeeting.scheduledTime)
       upcomingMeetingPayload = {
         title: upcomingMeeting.status === 'confirmed' ? 'Confirmed' : 'Awaiting confirmation',
         date: combined.toISOString(),
@@ -187,3 +185,4 @@ export const getMissedCommitments = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ message: error.message })
   }
 }
+

@@ -20,7 +20,11 @@ function formatDate(dateStr: string) {
 }
 
 function meetingDateTime(m: Meeting) {
-  return new Date(`${new Date(m.scheduledDate).toISOString().slice(0, 10)}T${m.scheduledTime}`).getTime()
+  const dateOnly = new Date(m.scheduledDate).toISOString().slice(0, 10)
+  const [hours, minutes] = m.scheduledTime.split(":").map(Number)
+  const [y, mo, d] = dateOnly.split("-").map(Number)
+  const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000
+  return Date.UTC(y, mo - 1, d, hours, minutes, 0, 0) - IST_OFFSET_MS
 }
 
 export function UpcomingMeeting() {

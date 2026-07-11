@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { motion } from "framer-motion"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -128,9 +128,12 @@ export function AttendanceHeatmap({ records, students }: Props) {
                 {week.map((d) => (
                   <span
                     key={d.toISOString()}
-                    className="w-7 text-center text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70"
+                    className="flex w-9 flex-col items-center text-center text-[10px] font-medium uppercase tracking-wide text-muted-foreground/70"
                   >
-                    {d.toLocaleDateString("en-US", { weekday: "short" })[0]}
+                    <span>{d.toLocaleDateString("en-US", { weekday: "short" })[0]}</span>
+                    <span className="text-[8px] normal-case text-muted-foreground/50">
+                      {d.toLocaleDateString("en-US", { day: "2-digit", month: "short" })}
+                    </span>
                   </span>
                 ))}
               </div>
@@ -170,14 +173,14 @@ export function AttendanceHeatmap({ records, students }: Props) {
                             render={
                               <button
                                 className={`h-7 w-7 rounded-[5px] transition-colors ${cellColor[state]}`}
-                                aria-label={`${student.name} — ${stateLabel[state]}`}
+                                aria-label={`${student.name} â€” ${stateLabel[state]}`}
                               />
                             }
                           />
                           <TooltipContent className="text-xs">
                             <p className="font-medium">{student.name}</p>
                             <p className="text-muted-foreground">
-                              {day.toLocaleDateString("en-US", { weekday: "short" })} · {stateLabel[state]}
+                              {day.toLocaleDateString("en-US", { weekday: "short" })} Â· {stateLabel[state]}
                             </p>
                           </TooltipContent>
                         </Tooltip>
