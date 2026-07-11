@@ -86,7 +86,11 @@ export function NotificationBell() {
       }
     }
     setOpen(false)
-    if (item.link) router.push(item.link)
+    if (item.link) {
+      setTimeout(() => {
+        router.push(item.link!)
+      }, 100)
+    }
   }
 
   return (
