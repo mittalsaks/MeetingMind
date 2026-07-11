@@ -85,11 +85,11 @@ export function NotificationBell() {
         console.error("Failed to mark read", err)
       }
     }
-    setOpen(false)
     if (item.link) {
+      const link = item.link
       setTimeout(() => {
-        router.push(item.link!)
-      }, 100)
+        router.push(link)
+      }, 150)
     }
   }
 
