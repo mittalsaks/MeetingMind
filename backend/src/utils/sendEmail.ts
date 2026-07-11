@@ -7,20 +7,19 @@ interface EmailOptions {
 }
 
 const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true,
+  host: 'smtp-relay.brevo.com',
+  port: 587,
+  secure: false,
   auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
+    user: process.env.BREVO_SMTP_USER,
+    pass: process.env.BREVO_SMTP_PASS,
   },
-  connectionTimeout: 15000,
 })
 
 export const sendEmail = async ({ to, subject, html }: EmailOptions) => {
   try {
     await transporter.sendMail({
-      from: `"MeetingMind" <${process.env.GMAIL_USER}>`,
+      from: `"MeetingMind" <${process.env.BREVO_SENDER_EMAIL}>`,
       to,
       subject,
       html,
