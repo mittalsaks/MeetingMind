@@ -1,7 +1,13 @@
-﻿import { BrevoClient } from '@getbrevo/brevo'
+﻿import { google } from 'googleapis'
 
-const brevo = new BrevoClient({
-  apiKey: process.env.BREVO_API_KEY!,
+const oAuth2Client = new google.auth.OAuth2(
+  process.env.GMAIL_API_CLIENT_ID,
+  process.env.GMAIL_API_CLIENT_SECRET,
+  'https://developers.google.com/oauthplayground'
+)
+
+oAuth2Client.setCredentials({
+  refresh_token: process.env.GMAIL_API_REFRESH_TOKEN,
 })
 
 interface EmailOptions {
@@ -10,14 +16,36 @@ interface EmailOptions {
   html: string
 }
 
+function createEmailRaw(to: string, from: string, subject: string, html: string) {
+  const messageParts = [
+    `To: ${to}`,
+    `From: MeetingMind <${from}>`,
+    `Subject: ${subject}`,
+    'MIME-Version: 1.0',
+    'Content-Type: text/html; charset=utf-8',
+    '',
+    html,
+  ]
+  const message = messageParts.join('\n')
+
+  return Buffer.from(message)
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '')
+}
+
 export const sendEmail = async ({ to, subject, html }: EmailOptions) => {
   try {
-    await brevo.transactionalEmails.sendTransacEmail({
-      subject,
-      htmlContent: html,
-      sender: { name: 'MeetingMind', email: process.env.BREVO_SENDER_EMAIL! },
-      to: [{ email: to }],
+    const gmail = google.gmail({ version: 'v1', auth: oAuth2Client })
+
+    const raw = createEmailRaw(to, process.env.GMAIL_API_SENDER_EMAIL!, subject, html)
+
+    await gmail.users.messages.send({
+      userId: 'me',
+      requestBody: { raw },
     })
+
     console.log(`Email sent to ${to}`)
     return true
   } catch (error) {
