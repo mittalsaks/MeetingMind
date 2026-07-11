@@ -3,7 +3,7 @@
 // 'mm_api_base' in chrome.storage.local (e.g. for local dev), that takes
 // priority — but for real installs this always resolves to production now
 // instead of failing on localhost:5000.
-const DEFAULT_API_BASE = 'https://meetingmind-backend-7kta.onrender.com/api'
+const DEFAULT_API_BASE = 'https://meetingmind-production-f733.up.railway.app/api'
 let API = DEFAULT_API_BASE
 let apiReady = new Promise((resolve) => {
   chrome.storage.local.get(['mm_api_base'], (data) => {

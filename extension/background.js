@@ -20,7 +20,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // ── API base ──
 // Localhost default (dev). Login flow se production URL 'mm_api_base' key
 // mein chrome.storage.local mein save hota hai — yahan wahi use hota hai.
-const DEFAULT_API_BASE = 'http://localhost:5000/api';
+const DEFAULT_API_BASE = 'https://meetingmind-production-f733.up.railway.app/api';
 
 async function getApiBase() {
   const data = await chrome.storage.local.get(['mm_api_base']);
