@@ -7,7 +7,7 @@ import Attendance from '../models/Attendance'
 import { AuthRequest } from '../middleware/auth'
 import { sendEmail } from '../utils/sendEmail'
 import { extractCommitmentsFromTranscript } from '../utils/geminiExtract'
-
+import { createNotification } from './notification.controller'
 // Same logic as attendance.controller.ts / audioTranscript.controller.ts —
 // kept here too so this endpoint's Meeting.attendanceCount stays accurate
 // and consistent with the real Attendance collection (see fix below).
@@ -103,6 +103,14 @@ export const confirmMeeting = async (req: AuthRequest, res: Response) => {
     subject: 'MeetingMind - Upcoming Meeting Reminder',
     html: `<p>Hi ${user.name},</p><p>Reminder: Your weekly meeting is scheduled for <strong>${meeting.scheduledDate.toDateString()} at ${meeting.scheduledTime}</strong>.</p>${meetLinkHtml}`
   })
+  await createNotification({
+    workspaceId: req.user!.workspaceId,
+    userId: user._id,
+    type: 'meeting_confirmed',
+    title: 'Upcoming meeting confirmed',
+    message: `Your weekly meeting is scheduled for ${meeting.scheduledDate.toDateString()} at ${meeting.scheduledTime}.`,
+    link: '/meetings',
+  })
 }
 
     meeting.reminderSent = true
@@ -130,6 +138,23 @@ export const rescheduleMeeting = async (req: AuthRequest, res: Response) => {
     meeting.scheduledTime = newTime
     meeting.status = 'rescheduled'
     await meeting.save()
+
+    const users = await User.find({
+      workspaceId: req.user!.workspaceId,
+      role: 'user',
+      isActive: true,
+      inviteAccepted: true
+    })
+    for (const user of users) {
+      await createNotification({
+        workspaceId: req.user!.workspaceId,
+        userId: user._id,
+        type: 'meeting_rescheduled',
+        title: 'Meeting rescheduled',
+        message: `Your weekly meeting was moved to ${new Date(newDate).toDateString()} at ${newTime}.`,
+        link: '/meetings',
+      })
+    }
 
     res.json({ success: true, meeting })
   } catch (error: any) {

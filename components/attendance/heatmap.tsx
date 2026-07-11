@@ -69,7 +69,7 @@ function getLastNWeeksDays(weeks: number) {
   for (let w = weeks - 1; w >= 0; w--) {
     const weekStart = new Date(today)
     weekStart.setDate(today.getDate() - today.getDay() + 1 - w * 7) // is week ka Monday
-    for (let d = 0; d < 5; d++) {
+    for (let d = 0; d < 7; d++) {
       const day = new Date(weekStart)
       day.setDate(weekStart.getDate() + d)
       days.push(day)
@@ -93,7 +93,7 @@ export function AttendanceHeatmap({ records, students }: Props) {
   // weeks of 5 days each
   const weekChunks: Date[][] = []
   for (let i = 0; i < WEEKS; i++) {
-    weekChunks.push(allDays.slice(i * 5, i * 5 + 5))
+    weekChunks.push(allDays.slice(i * 7, i * 7 + 7))
   }
 
   function recordFor(userId: string, date: Date) {

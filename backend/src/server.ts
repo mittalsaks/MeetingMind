@@ -16,6 +16,7 @@ import leaveRoutes from './routes/leave.routes'
 import meetingRoutes from './routes/meeting.routes'
 import attendanceRoutes from './routes/attendance.routes'
 import adminRoutes from './routes/admin.routes'
+import notificationRoutes from './routes/notification.routes'
 import { startDailyReminderCron } from './jobs/dailyReminder'
 import passport from './config/passport'
 
@@ -64,6 +65,7 @@ app.use('/api/leave-requests', leaveRoutes)
 app.use('/api/meetings', meetingRoutes)
 app.use('/api/attendance', attendanceRoutes)
 app.use('/api/admin', adminRoutes)
+app.use('/api/notifications', notificationRoutes)
 const PORT = process.env.PORT || 5000
 app.listen(PORT, () => {
   console.log('Server running on port ' + PORT)

@@ -3,7 +3,7 @@ import Task from '../models/Task'
 import User from '../models/User'
 import { AuthRequest } from '../middleware/auth'
 import { sendEmail } from '../utils/sendEmail'
-
+import { createNotification } from './notification.controller'
 // @GET /api/tasks (admin = all workspace tasks, user = own tasks only)
 export const getTasks = async (req: AuthRequest, res: Response) => {
   try {
@@ -78,6 +78,14 @@ export const markComplete = async (req: AuthRequest, res: Response) => {
           </div>
         `,
       })
+      await createNotification({
+        workspaceId: req.user!.workspaceId,
+        userId: admin._id,
+        type: 'task_verification_needed',
+        title: 'Task ready for verification',
+        message: `${studentName} marked "${task.title}" as complete.`,
+        link: '/tasks',
+      })
     }
 
     res.json({ success: true, task })
@@ -116,6 +124,14 @@ export const verifyTask = async (req: AuthRequest, res: Response) => {
             <p style="margin-top:24px;color:#888;font-size:12px;">MeetingMind</p>
           </div>
         `,
+      })
+      await createNotification({
+        workspaceId: req.user!.workspaceId,
+        userId: task.userId,
+        type: 'task_verified',
+        title: 'Task verified',
+        message: `Your mentor verified: ${task.title}`,
+        link: '/tasks',
       })
     }
 

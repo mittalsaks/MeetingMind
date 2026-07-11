@@ -4,7 +4,7 @@ import User from '../models/User'
 import { AuthRequest } from '../middleware/auth'
 import { sendEmail } from '../utils/sendEmail'
 import { syncLeaveAttendance } from './attendance.controller'
-
+import { createNotification } from './notification.controller'
 // @POST /api/leave-requests (user submits)
 export const submitLeave = async (req: AuthRequest, res: Response) => {
   try {
@@ -41,6 +41,14 @@ export const submitLeave = async (req: AuthRequest, res: Response) => {
           </div>
         `,
       })
+      await createNotification({
+  workspaceId: req.user!.workspaceId,
+  userId: admin._id,
+  type: 'leave_request',
+  title: 'New leave request',
+  message: `${student?.name || 'A student'} requested leave from ${new Date(fromDate).toDateString()} to ${new Date(toDate).toDateString()}`,
+  link: '/leave-requests',
+})
     }
 
     res.status(201).json({ success: true, leave })
@@ -93,7 +101,14 @@ export const reviewLeave = async (req: AuthRequest, res: Response) => {
       subject: `Leave Request ${status === 'approved' ? 'Approved' : 'Rejected'}`,
       html: `<p>Hi ${student.name},</p><p>Your leave request has been <strong>${status}</strong>.</p>${adminNote ? `<p>Note: ${adminNote}</p>` : ''}`
     })
-
+    await createNotification({
+  workspaceId: req.user!.workspaceId,
+  userId: student._id,
+  type: 'leave_reviewed',
+  title: `Leave request ${status}`,
+  message: adminNote ? `Note: ${adminNote}` : `Your leave request has been ${status}.`,
+  link: '/leave-requests',
+})
     res.json({ success: true, leave })
   } catch (error: any) {
     res.status(500).json({ message: error.message })

@@ -24,6 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useAuthStore } from "@/lib/store/authStore"
+import { NotificationBell } from "@/components/shell/notification-bell"
 import api from "@/lib/api/axios"
 
 const workspaces = ["Capstone 2026 · Cohort B", "Capstone 2026 · Cohort A", "Summer Interns"]
@@ -131,10 +132,7 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
           AI Insights
         </Button>
 
-        <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
-          <Bell className="size-5" />
-          <span className="absolute right-2 top-2 size-2 rounded-full bg-danger ring-2 ring-background" />
-        </Button>
+        <NotificationBell />
 
         <DropdownMenu>
           <DropdownMenuTrigger>
