@@ -1,8 +1,9 @@
-import { Response } from 'express'
+﻿import { Response } from 'express'
 import Attendance from '../models/Attendance'
 import Meeting from '../models/Meeting'
 import User from '../models/User'
 import { AuthRequest } from '../middleware/auth'
+import { getISTDayBounds } from '../utils/timezone'
 import mongoose from 'mongoose'
 
 function toObjectId(value: string | mongoose.Types.ObjectId) {
@@ -10,9 +11,8 @@ function toObjectId(value: string | mongoose.Types.ObjectId) {
 }
 
 function normalizeDay(dateInput: Date | string) {
-  const date = new Date(dateInput)
-  date.setHours(0, 0, 0, 0)
-  return date
+  const { startOfDay } = getISTDayBounds(new Date(dateInput))
+  return startOfDay
 }
 
 function getDayRange(dateInput: Date | string) {
@@ -28,7 +28,7 @@ function getDayRange(dateInput: Date | string) {
 //   (matches the app's "spoke" definition used elsewhere in the UI)
 // - totalInvited = workspace's active, invite-accepted students at the time
 //   of the count (i.e. who *could* have attended), not just how many
-//   attendance records happen to exist — this is the more correct,
+//   attendance records happen to exist â€” this is the more correct,
 //   industry-standard meaning of "invited"
 async function syncMeetingAttendanceCounts(meetingId: string, workspaceId: string) {
   const meetingObjId = new mongoose.Types.ObjectId(meetingId)
@@ -133,7 +133,7 @@ export const markAttendance = async (req: AuthRequest, res: Response) => {
     )
 
     // Keep the Meeting doc's attendanceCount/totalInvited in sync with
-    // real attendance records — these fields were previously never updated.
+    // real attendance records â€” these fields were previously never updated.
     await syncMeetingAttendanceCounts(meetingId, req.user!.workspaceId)
 
     res.json({ success: true, attendance })
@@ -148,7 +148,7 @@ export const getAttendance = async (req: AuthRequest, res: Response) => {
     const filter: any = { workspaceId: req.user!.workspaceId }
     // role !== 'admin' covers the only other real role, 'user' (students).
     // (Confirmed via workspace.controller.ts: invite-accepted students are
-    // always created with role:'user' — there is no separate 'student'
+    // always created with role:'user' â€” there is no separate 'student'
     // role in the backend, despite the frontend's User type allowing it.)
     if (req.user!.role !== 'admin') {
       filter.userId = req.user!.userId

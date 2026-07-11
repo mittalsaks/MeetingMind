@@ -1,14 +1,15 @@
-import { Response } from 'express'
+﻿import { Response } from 'express'
 import mongoose from 'mongoose'
 import Meeting from '../models/Meeting'
 import User from '../models/User'
 import Task from '../models/Task'
 import Attendance from '../models/Attendance'
 import { AuthRequest } from '../middleware/auth'
+import { getISTDayBounds } from '../utils/timezone'
 import { sendEmail } from '../utils/sendEmail'
 import { extractCommitmentsFromTranscript } from '../utils/geminiExtract'
 import { createNotification } from './notification.controller'
-// Same logic as attendance.controller.ts / audioTranscript.controller.ts —
+// Same logic as attendance.controller.ts / audioTranscript.controller.ts â€”
 // kept here too so this endpoint's Meeting.attendanceCount stays accurate
 // and consistent with the real Attendance collection (see fix below).
 async function syncMeetingAttendanceCounts(meetingId: string, workspaceId: string) {
@@ -96,7 +97,7 @@ export const confirmMeeting = async (req: AuthRequest, res: Response) => {
     for (const user of users) {
   const meetLinkHtml = meeting.googleMeetLink
     ? `<p>Join here: <a href="${meeting.googleMeetLink}">${meeting.googleMeetLink}</a></p>`
-    : `<p style="color:#b45309;">⚠️ Meeting link not added yet — please check with your mentor before the call.</p>`
+    : `<p style="color:#b45309;">âš ï¸ Meeting link not added yet â€” please check with your mentor before the call.</p>`
 
   await sendEmail({
     to: user.email,
@@ -208,8 +209,7 @@ export const processTranscript = async (req: AuthRequest, res: Response) => {
 
     const createdTasks = []
     const spokeUserIds: string[] = []
-    const attendanceDate = new Date()
-    attendanceDate.setHours(0, 0, 0, 0)
+    const { startOfDay: attendanceDate } = getISTDayBounds()
 
     for (const item of extracted) {
       const geminiName = item.studentName.trim().toLowerCase()
@@ -219,7 +219,7 @@ export const processTranscript = async (req: AuthRequest, res: Response) => {
         (s) => s.name.trim().toLowerCase() === geminiName
       )
 
-      // 2. Fallback: partial match — handles Gemini truncating/expanding names
+      // 2. Fallback: partial match â€” handles Gemini truncating/expanding names
       //    e.g. DB has "Sakshi Mittal lovebabbar", Gemini returns "Sakshi Mittal"
       if (!matchedStudent) {
         const candidates = students.filter((s) => {
@@ -227,16 +227,16 @@ export const processTranscript = async (req: AuthRequest, res: Response) => {
           return dbName.includes(geminiName) || geminiName.includes(dbName)
         })
 
-        // Only auto-accept if exactly one candidate matches — avoid wrongly
+        // Only auto-accept if exactly one candidate matches â€” avoid wrongly
         // picking between two similarly-named students (e.g. two "Sakshi"s)
         if (candidates.length === 1) {
           matchedStudent = candidates[0]
-          console.log(`ℹ️ Partial-matched "${item.studentName}" → "${matchedStudent.name}"`)
+          console.log(`â„¹ï¸ Partial-matched "${item.studentName}" â†’ "${matchedStudent.name}"`)
         }
       }
 
       if (!matchedStudent) {
-        console.log(`⚠️ Could not match "${item.studentName}" to a known student — skipping`)
+        console.log(`âš ï¸ Could not match "${item.studentName}" to a known student â€” skipping`)
         continue
       }
 
@@ -297,7 +297,7 @@ await Attendance.findOneAndUpdate(
       spoke: spokeUserIds
     })
   } catch (error: any) {
-    console.error('🔴 processTranscript error:', error.message)
+    console.error('ðŸ”´ processTranscript error:', error.message)
     res.status(500).json({ message: error.message })
   }
 }
@@ -315,10 +315,7 @@ export const getTodayActiveMeeting = async (req: AuthRequest, res: Response) => 
   try {
     const workspaceId = req.user!.workspaceId
 
-    const startOfDay = new Date()
-    startOfDay.setHours(0, 0, 0, 0)
-    const endOfDay = new Date(startOfDay)
-    endOfDay.setDate(endOfDay.getDate() + 1)
+    const { startOfDay, endOfDay } = getISTDayBounds()
 
     const meeting = await Meeting.findOne({
       workspaceId,

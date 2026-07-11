@@ -1,5 +1,6 @@
-import { Response } from 'express'
+﻿import { Response } from 'express'
 import { AuthRequest } from '../middleware/auth'
+import { getISTDayBounds } from '../utils/timezone'
 import User from '../models/User'
 import Task from '../models/Task'
 import DailyUpdate from '../models/DailyUpdate'
@@ -10,10 +11,7 @@ export const getAdminStats = async (req: AuthRequest, res: Response) => {
   try {
     const workspaceId = req.user!.workspaceId
 
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
+    const { startOfDay: today, endOfDay: tomorrow } = getISTDayBounds()
 
     // Week start (Monday)
     const weekStart = new Date(today)
@@ -56,7 +54,7 @@ export const getAdminStats = async (req: AuthRequest, res: Response) => {
 
     // Combine date + time into one real ISO datetime so the frontend can
     // format weekday/hour/minute correctly (scheduledDate alone has no
-    // time-of-day — it's stored separately in scheduledTime). Previously
+    // time-of-day â€” it's stored separately in scheduledTime). Previously
     // this sent a pre-formatted string, but admin-dashboard.tsx expects
     // an { title?, date? } object and was silently reading undefined
     // fields off the string, always falling back to "None".
@@ -99,7 +97,7 @@ export const sendReminderEmail = async (req: AuthRequest, res: Response) => {
 
     await sendEmail({
       to: user.email,
-      subject: '⏰ Reminder: Submit your daily update',
+      subject: 'â° Reminder: Submit your daily update',
       html: `
         <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
           <h2 style="color: #111;">Daily Update Reminder</h2>
@@ -128,8 +126,7 @@ export const sendReminderEmail = async (req: AuthRequest, res: Response) => {
 export const getMissedCommitments = async (req: AuthRequest, res: Response) => {
   try {
     const workspaceId = req.user!.workspaceId
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const { startOfDay: today } = getISTDayBounds()
 
     const overdueTasks = await Task.find({
       workspaceId,

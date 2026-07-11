@@ -1,7 +1,8 @@
-import { Response } from 'express'
+﻿import { Response } from 'express'
 import DailyUpdate from '../models/DailyUpdate'
 import User from '../models/User'
 import { AuthRequest } from '../middleware/auth'
+import { getISTDayBounds } from '../utils/timezone'
 import { sendEmail } from '../utils/sendEmail'
 import { syncDailyUpdateAttendance } from './attendance.controller'
 
@@ -9,8 +10,7 @@ import { syncDailyUpdateAttendance } from './attendance.controller'
 export const submitUpdate = async (req: AuthRequest, res: Response) => {
   try {
     const { yesterday, today, blockers } = req.body
-    const todayDate = new Date()
-    todayDate.setHours(0, 0, 0, 0)
+    const { startOfDay: todayDate } = getISTDayBounds()
 
     const existing = await DailyUpdate.findOne({
       userId: req.user!.userId,

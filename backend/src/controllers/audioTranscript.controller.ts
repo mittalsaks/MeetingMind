@@ -1,4 +1,4 @@
-// backend/src/controllers/audioTranscript.controller.ts
+﻿// backend/src/controllers/audioTranscript.controller.ts
 import { Response } from 'express'
 import mongoose from 'mongoose'
 import Meeting from '../models/Meeting'
@@ -6,9 +6,10 @@ import Task from '../models/Task'
 import Attendance from '../models/Attendance'
 import User from '../models/User'
 import { AuthRequest } from '../middleware/auth'
+import { getISTDayBounds } from '../utils/timezone'
 import { extractCommitmentsFromAudio } from '../utils/geminiExtract'
 
-// Fuzzy name match — exact first, then partial substring, auto-accept only if
+// Fuzzy name match â€” exact first, then partial substring, auto-accept only if
 // exactly one candidate. Same pattern as processTranscript in meeting.controller.ts.
 function fuzzyMatchStudent(
   name: string,
@@ -30,7 +31,7 @@ function fuzzyMatchStudent(
 }
 
 // Reuse the same syncMeetingAttendanceCounts logic from attendance.controller.ts
-// (copied here to avoid circular imports — keep in sync if attendance logic changes)
+// (copied here to avoid circular imports â€” keep in sync if attendance logic changes)
 async function syncMeetingAttendanceCounts(meetingId: string, workspaceId: string) {
   const meetingObjId = new mongoose.Types.ObjectId(meetingId)
   const workspaceObjId = new mongoose.Types.ObjectId(workspaceId)
@@ -57,11 +58,11 @@ async function syncMeetingAttendanceCounts(meetingId: string, workspaceId: strin
  * POST /api/meetings/:id/process-audio-chunk
  *
  * Body:
- *   audioBase64: string   — base64-encoded audio chunk
- *   mimeType: string      — e.g. "audio/webm" or "audio/wav"
+ *   audioBase64: string   â€” base64-encoded audio chunk
+ *   mimeType: string      â€” e.g. "audio/webm" or "audio/wav"
  *
  * What it does:
- *   1. Sends audio chunk to Gemini → extracts who spoke + commitments
+ *   1. Sends audio chunk to Gemini â†’ extracts who spoke + commitments
  *   2. For each matched student who spoke:
  *      a. Creates/updates a Task (source: 'meeting', same as text pipeline)
  *      b. Upserts an Attendance record with verbalUpdateGiven: true, status: 'present'
@@ -116,13 +117,12 @@ export const processAudioChunk = async (req: AuthRequest, res: Response) => {
     const deadline = new Date(meeting.scheduledDate)
     deadline.setDate(deadline.getDate() + 7)
 
-    const attendanceDate = new Date()
-    attendanceDate.setHours(0, 0, 0, 0)
+    const { startOfDay: attendanceDate } = getISTDayBounds()
 
     for (const c of commitments) {
       const userId = fuzzyMatchStudent(c.studentName, studentList)
       if (!userId) {
-        console.warn(`⚠️ Could not match student name: "${c.studentName}" — skipping`)
+        console.warn(`âš ï¸ Could not match student name: "${c.studentName}" â€” skipping`)
         continue
       }
 
@@ -145,7 +145,7 @@ export const processAudioChunk = async (req: AuthRequest, res: Response) => {
         tasksCreated++
       }
 
-      // 4b. Mark Attendance — upsert, same pattern as markAttendance controller
+      // 4b. Mark Attendance â€” upsert, same pattern as markAttendance controller
       const dayStart = new Date(attendanceDate)
 const dayEnd = new Date(dayStart)
 dayEnd.setDate(dayEnd.getDate() + 1)
@@ -170,7 +170,7 @@ await Attendance.findOneAndUpdate(
       spoke: spokeUserIds.map((id) => id.toString()),
     })
   } catch (error: any) {
-    console.error('🔴 processAudioChunk error:', error)
+    console.error('ðŸ”´ processAudioChunk error:', error)
     res.status(500).json({ message: error.message })
   }
 }
@@ -204,9 +204,9 @@ export const processTranscriptChunk = async (req: AuthRequest, res: Response) =>
     const { extractCommitmentsFromTranscript } = await import('../utils/geminiExtract')
     const commitments = await extractCommitmentsFromTranscript(transcript, knownNames)
     // ADD KARO YEH LINES:
-    console.log('📋 Known students:', knownNames)
-    console.log('📝 Transcript received:', transcript)
-    console.log('🤖 Gemini commitments:', JSON.stringify(commitments))
+    console.log('ðŸ“‹ Known students:', knownNames)
+    console.log('ðŸ“ Transcript received:', transcript)
+    console.log('ðŸ¤– Gemini commitments:', JSON.stringify(commitments))
     if (commitments.length === 0) {
       return res.json({ success: true, tasksCreated: 0, attendanceMarked: 0, spoke: [] })
     }
@@ -218,13 +218,12 @@ export const processTranscriptChunk = async (req: AuthRequest, res: Response) =>
     const deadline = new Date(meeting.scheduledDate)
     deadline.setDate(deadline.getDate() + 7)
 
-    const attendanceDate = new Date()
-    attendanceDate.setHours(0, 0, 0, 0)
+    const { startOfDay: attendanceDate } = getISTDayBounds()
 
     for (const c of commitments) {
       const userId = fuzzyMatchStudent(c.studentName, studentList)
       if (!userId) {
-        console.warn(`⚠️ Could not match student: "${c.studentName}"`)
+        console.warn(`âš ï¸ Could not match student: "${c.studentName}"`)
         continue
       }
       spokeUserIds.push(userId)
@@ -261,7 +260,7 @@ await Attendance.findOneAndUpdate(
 
     res.json({ success: true, tasksCreated, attendanceMarked, spoke: spokeUserIds.map((id) => id.toString()) })
   } catch (error: any) {
-    console.error('🔴 processTranscriptChunk error:', error)
+    console.error('ðŸ”´ processTranscriptChunk error:', error)
     res.status(500).json({ message: error.message })
   }
 }
