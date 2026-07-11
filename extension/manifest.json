@@ -12,6 +12,7 @@
   "host_permissions": [
     "http://localhost:5000/*",
     "https://meet.google.com/*",
+    "https://meetingmind-production-f733.up.railway.app/*",
     "https://*.onrender.com/*"
   ],
   "background": {
