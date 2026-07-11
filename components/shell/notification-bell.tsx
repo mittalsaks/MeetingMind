@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -73,23 +74,12 @@ export function NotificationBell() {
     }
   }
 
-  const handleItemClick = async (item: NotificationItem) => {
+  const handleItemClick = (item: NotificationItem) => {
     if (!item.read) {
-      try {
-        await api.put(`/notifications/${item._id}/read`)
-        setNotifications((prev) =>
-          prev.map((n) => (n._id === item._id ? { ...n, read: true } : n))
-        )
-        setUnreadCount((prev) => Math.max(0, prev - 1))
-      } catch (err) {
-        console.error("Failed to mark read", err)
-      }
+      api.put(`/notifications/${item._id}/read`).catch(() => {})
     }
     if (item.link) {
-      const link = item.link
-      setTimeout(() => {
-        window.location.href = link
-      }, 150)
+      window.location.href = item.link
     }
   }
 
@@ -106,6 +96,7 @@ export function NotificationBell() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80">
+        <DropdownMenuGroup>
         <div className="flex items-center justify-between px-2 py-1.5">
           <DropdownMenuLabel className="p-0">Notifications</DropdownMenuLabel>
           {unreadCount > 0 && (
@@ -142,8 +133,11 @@ export function NotificationBell() {
             ))
           )}
         </ScrollArea>
+              </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   )
 }
+
+
 
