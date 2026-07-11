@@ -7,11 +7,14 @@ interface EmailOptions {
 }
 
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true,
   auth: {
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_APP_PASSWORD,
   },
+  connectionTimeout: 15000,
 })
 
 export const sendEmail = async ({ to, subject, html }: EmailOptions) => {
