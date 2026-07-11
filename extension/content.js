@@ -240,31 +240,27 @@ function flushLiveLine() {
   }
   liveLine = { speaker: '', text: '' }
 }
+function normalize(str) {
+  return str.toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
 function matchToKnownSpeaker(rawName) {
   if (!rawName) return rawName
-  const clean = rawName.trim().toLowerCase()
-  if (!clean) return rawName
+  const cleanNorm = normalize(rawName)
+  if (!cleanNorm) return rawName
 
-  // 1. Exact match
-  let match = KNOWN_SPEAKERS.find(s => s.toLowerCase() === clean)
+  // 1. Exact normalized match
+  let match = KNOWN_SPEAKERS.find(s => normalize(s) === cleanNorm)
   if (match) return match
 
-  // 2. Ek dusre ke andar contain ho (caption naam chhota ho sakta hai)
+  // 2. Substring match (normalized)
   match = KNOWN_SPEAKERS.find(s => {
-    const known = s.toLowerCase()
-    return known.includes(clean) || clean.includes(known)
+    const knownNorm = normalize(s)
+    return knownNorm.includes(cleanNorm) || cleanNorm.includes(knownNorm)
   })
   if (match) return match
 
-  // 3. Word-level overlap (kam se kam pehla naam match ho)
-  const cleanWords = clean.split(/\s+/)
-  match = KNOWN_SPEAKERS.find(s => {
-    const knownWords = s.toLowerCase().split(/\s+/)
-    return cleanWords[0] === knownWords[0]
-  })
-  if (match) return match
-
-  return rawName // kuch na mile to raw naam hi bhej do
+  return rawName // no confident match — leave as-is, let backend/Gemini reject it
 }
 function extractCaptionData(node) {
   const row = node.closest?.('.nMcdL') || node.querySelector?.('.nMcdL') || node

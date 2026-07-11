@@ -56,19 +56,22 @@ ${transcript}
 """
 
 For each student who spoke in the transcript, extract:
-- studentName: match to the closest known student name from the list above (exact match preferred)
+- studentName: the EXACT name from the known students list above
 - completedWork: a short summary (max 15 words) of what they said they completed this week
 - nextCommitment: a short summary (max 15 words) of what they said they will work on next
 
-Rules:
-- Only include students who are clearly present in the known students list above.
+STRICT RULES:
+- studentName must be an EXACT, confident match to a name on the known students list.
+- Do NOT guess, infer, or pick the "closest" name if the speaker is unclear, unnamed, or labeled "Unknown".
+- If the transcript shows the speaker as "Unknown" or has no name attribution, and there is no explicit name mentioned anywhere in that segment's own text, SKIP that segment entirely — do not assign it to any student.
+- Never default to any name just because it appears first in the list, or because it's the only name you recognize contextually — only use explicit textual evidence from the transcript itself.
 - Ignore greetings, small talk, or anyone not on the known students list.
 - If a student spoke but gave no clear completed work or next commitment, skip them.
 
 Respond with ONLY a raw JSON array, no markdown formatting, no code fences, no explanation. Example:
-[{"studentName": "Rahul Sharma", "completedWork": "Finished login page and JWT auth", "nextCommitment": "Build dashboard API integration"}]
+[{"studentName": "Sakshi Mittal", "completedWork": "Finished login page and JWT auth", "nextCommitment": "Build dashboard API integration"}]
 
-If no valid student updates are found, respond with exactly: []`
+If no valid, confidently-attributed student updates are found, respond with exactly: []`
 
   const result = await callGeminiWithRetry(model, prompt)
   const rawText = result.response.text().trim()
