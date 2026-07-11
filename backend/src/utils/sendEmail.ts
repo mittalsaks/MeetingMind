@@ -1,10 +1,8 @@
-﻿import * as brevo from '@getbrevo/brevo'
+﻿import { BrevoClient } from '@getbrevo/brevo'
 
-const apiInstance = new brevo.TransactionalEmailsApi()
-apiInstance.setApiKey(
-  brevo.TransactionalEmailsApiApiKeys.apiKey,
-  process.env.BREVO_API_KEY!
-)
+const brevo = new BrevoClient({
+  apiKey: process.env.BREVO_API_KEY!,
+})
 
 interface EmailOptions {
   to: string
@@ -14,13 +12,12 @@ interface EmailOptions {
 
 export const sendEmail = async ({ to, subject, html }: EmailOptions) => {
   try {
-    const sendSmtpEmail = new brevo.SendSmtpEmail()
-    sendSmtpEmail.subject = subject
-    sendSmtpEmail.htmlContent = html
-    sendSmtpEmail.sender = { name: 'MeetingMind', email: process.env.BREVO_SENDER_EMAIL! }
-    sendSmtpEmail.to = [{ email: to }]
-
-    await apiInstance.sendTransacEmail(sendSmtpEmail)
+    await brevo.transactionalEmails.sendTransacEmail({
+      subject,
+      htmlContent: html,
+      sender: { name: 'MeetingMind', email: process.env.BREVO_SENDER_EMAIL! },
+      to: [{ email: to }],
+    })
     console.log(`Email sent to ${to}`)
     return true
   } catch (error) {
