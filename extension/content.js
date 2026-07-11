@@ -4,7 +4,7 @@
 // ── API base ──
 // Localhost default (dev). Deployment ke time login flow se production URL
 // chrome.storage mein 'mm_api_base' key mein save hoga aur yahan use hoga.
-const DEFAULT_API_BASE = 'http://localhost:5000/api'
+const DEFAULT_API_BASE = 'https://meetingmind-production-f733.up.railway.app/api'
 let API = DEFAULT_API_BASE
 let apiReady = new Promise((resolve) => {
   chrome.storage.local.get(['mm_api_base'], (data) => {
