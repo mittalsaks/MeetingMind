@@ -6,7 +6,7 @@
 
 ### AI-Powered Mentor Accountability & Meeting Intelligence Platform
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-meetingmind--frontend--45d3.onrender.com-6366F1?style=for-the-badge)](https://meetingmind-frontend-45d3.onrender.com)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-meetingmind--navy.vercel.app-6366F1?style=for-the-badge)](https://meetingmind-navy.vercel.app)
 
 <br/>
 
@@ -180,15 +180,15 @@ MeetingMind separates mentor and student views at both the **UI and API level** 
 - Web Speech API fallback for redundancy
 
 **Deployment**
-- Backend → Render
-- Frontend → Render
+- Backend → Railway
+- Frontend → Vercel
 - Database → MongoDB Atlas
 
 ---
 
 ## 🌐 Live Demo
 
-🔗 **[meetingmind-frontend-45d3.onrender.com](https://meetingmind-frontend-45d3.onrender.com)**
+🔗 **[meetingmind-navy.vercel.app](https://meetingmind-navy.vercel.app)**
 
 ---
 
