@@ -606,12 +606,14 @@ async function startListening(meetingId, token) {
   startCaptionObserver()
   startSpeechRecognition()
 
-  chunkTimer = setInterval(() => {
-    if (chunkBuffer.trim().length > 20) {
-      sendTranscriptChunk(chunkBuffer.trim())
-      chunkBuffer = ''
-    }
-  }, 60000)
+  // Quota bachane ke liye: ab har 60 sec me chunk nahi bhejenge.
+  // Sirf meeting end pe (stopListening me) ek hi baar poora transcript jayega.
+  // chunkTimer = setInterval(() => {
+  //   if (chunkBuffer.trim().length > 20) {
+  //     sendTranscriptChunk(chunkBuffer.trim())
+  //     chunkBuffer = ''
+  //   }
+  // }, 60000)
 
   console.log(`MeetingMind: All systems active ✓ | Captions: ${ccOk ? 'ON' : 'FALLBACK'} | Students: ${KNOWN_SPEAKERS.length}`)
 }

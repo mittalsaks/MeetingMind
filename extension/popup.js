@@ -176,10 +176,16 @@ recordBtn.addEventListener('click', () => {
       const meetTab = tabs[0]
 
       if (!isRecording) {
-        // ✅ FIX: Fresh token lo PEHLE, phir MM_START bhejo
+        // Turant save + UI update karo — popup band hone se pehle hi
+        // ye flag persist ho jayega, chahe async chain baad me complete ho
+        chrome.storage.local.set({ mm_recording: true })
+        setRecordingUI()
+
         getValidToken().then((freshToken) => {
           if (!freshToken) {
             showError('Token refresh failed. Please logout and login again.')
+            chrome.storage.local.set({ mm_recording: false })
+            setStoppedUI()
             return
           }
           sendToContentScript(
@@ -190,8 +196,7 @@ recordBtn.addEventListener('click', () => {
               token: freshToken  // ✅ Fresh token — 401 fix
             },
             (response) => {
-              chrome.storage.local.set({ mm_recording: true })
-              setRecordingUI()
+              // Already set optimistically upar
             }
           )
         })
