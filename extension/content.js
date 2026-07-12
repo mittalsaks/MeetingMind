@@ -245,15 +245,10 @@ function matchToKnownSpeaker(rawName) {
   const cleanNorm = normalize(rawName)
   if (!cleanNorm) return rawName
 
-  // 1. Exact normalized match
+  // Sirf EXACT normalized match — substring match hata diya kyunki wo
+  // galat tarike se ek naam ko dusre naam ke andar match kar deta tha
+  // (e.g. "Sakshi Mittal" admin ka naam "sakshimittal753" student se match ho jata tha)
   let match = KNOWN_SPEAKERS.find(s => normalize(s) === cleanNorm)
-  if (match) return match
-
-  // 2. Substring match (normalized)
-  match = KNOWN_SPEAKERS.find(s => {
-    const knownNorm = normalize(s)
-    return knownNorm.includes(cleanNorm) || cleanNorm.includes(knownNorm)
-  })
   if (match) return match
 
   return rawName // no confident match — leave as-is, backend/Gemini will reject if unmatched
@@ -290,6 +285,7 @@ function getActiveSpeakerName() {
   try {
     const ACTIVE_SPEAKER_PATTERNS = [
       '.oZRSLe', // Confirmed current Meet active-speaker tile class (contains name in innerText)
+      
       '[class*="speaking"]',
       '[data-speaking-state="true"]',
       '[data-is-speaking="true"]',
@@ -310,7 +306,7 @@ function getActiveSpeakerName() {
 
     for (const pattern of ACTIVE_SPEAKER_PATTERNS) {
       const tile = document.querySelector(pattern)
-      if (tile) {
+      if (tile && !tile.closest('[data-self-name]') && !tile.hasAttribute('data-self-name')) {
         activeTile = tile
         matchedPattern = pattern
         console.log('MeetingMind [ActiveSpeaker]: Found speaking tile with pattern:', pattern)
